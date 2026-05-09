@@ -187,11 +187,110 @@
     #pageAnaliza tbody tr.row-nepopisan{display:none!important;}
     .lnone{display:none;}
   }
+  .card-list{display:none;}  /* vidljivo samo na mobitelu via media query */
   .pt{display:none;}
-  @media(max-width:700px){
-    td.sifra,td.cijena,.napomena-cell{display:none;}
-    .qty-input{width:65px;}
+  /* ═══ MOBILE ═══════════════════════════════════════════ */
+  @media(max-width:600px){
+    /* Header kompaktniji */
+    header{padding:10px 14px;}
+    .logo{font-size:16px;}
+    .logo span{font-size:11px;}
+    #hDatum{display:none;}
+
+    /* Tabs manji */
+    .main-tab{padding:10px 12px;font-size:12px;}
+
+    /* Container bez bočnih margina */
+    .container{padding:12px 8px 140px;}
+
+    /* Top bar - složi vertikalno */
+    .top-bar{flex-direction:column;align-items:stretch;gap:8px;}
+    .date-group{justify-content:space-between;}
+    .top-bar-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+    /* Sakrij pretragu JM i filter unosa - ostavi samo pretragu i kat tabove */
+    #fJM,#fUnos{display:none;}
+
+    /* Kat tabovi - horizontalni scroll */
+    .tab-bar{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;gap:6px;-webkit-overflow-scrolling:touch;}
+    .tab-bar::-webkit-scrollbar{display:none;}
+    .kat-tab{white-space:nowrap;flex-shrink:0;}
+
+    /* ═══ SAKRIJ TABELU, PRIKAŽI KARTICE ═══ */
+    .table-wrap{display:none;}
+    .card-list{display:flex;}
+
+    /* CARD LIST */
+    .card-list{display:flex;flex-direction:column;gap:2px;}
+    .art-card{
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:12px 14px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      transition:background .15s;
+    }
+    .art-card.has-value{
+      background:rgba(201,168,76,0.07);
+      border-color:rgba(201,168,76,0.4);
+    }
+    .art-card.trm{border-left:3px solid #e74c3c;background:rgba(192,57,43,0.05);}
+    .art-card.trv{border-left:3px solid var(--success);background:rgba(39,174,96,0.04);}
+
+    .card-info{flex:1;min-width:0;}
+    .card-naziv{
+      font-size:14px;font-weight:500;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      color:var(--text);margin-bottom:3px;
+    }
+    .card-meta{
+      display:flex;align-items:center;gap:8px;
+      font-size:11px;color:var(--text-muted);
+    }
+    .card-jm{
+      background:var(--surface2);border-radius:4px;
+      padding:1px 6px;font-size:10px;font-weight:600;color:var(--gold);
+    }
+    .card-lager{font-size:11px;color:var(--text-muted);}
+    .card-razlika{font-size:12px;font-weight:600;}
+
+    .card-input-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+    .card-qty{
+      background:var(--input-bg);
+      border:2px solid var(--border);
+      border-radius:8px;
+      padding:8px 10px;
+      color:var(--text);
+      font-family:'Jost',sans-serif;
+      font-size:18px;
+      font-weight:600;
+      width:80px;
+      text-align:center;
+      outline:none;
+      -moz-appearance:textfield;
+    }
+    .card-qty::-webkit-inner-spin-button,
+    .card-qty::-webkit-outer-spin-button{-webkit-appearance:none;}
+    .card-qty:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,0.2);}
+    .card-qty.filled{border-color:var(--gold);background:rgba(201,168,76,0.1);color:var(--gold-light);}
+    .card-ukupno{font-size:11px;color:var(--gold);font-weight:600;text-align:right;}
+
+    /* Summary bar na mobitelu */
+    .summary-bar{padding:8px 12px;gap:8px;}
+    .ss{gap:12px;}
+    .stv{font-size:14px;}
+    .stv.sm{font-size:13px;}
+    .stl{font-size:9px;}
+
+    /* Stats grid 2 kolone */
     .stats-grid{grid-template-columns:repeat(2,1fr);}
+
+    /* Analiza tabela - sakrij neke kolone */
+    #pageAnaliza td:nth-child(1),#pageAnaliza th:nth-child(1){display:none;}
+    #pageAnaliza td.sifra,#pageAnaliza th:nth-child(2){display:none;}
+    #pageAnaliza td:nth-child(8),#pageAnaliza th:nth-child(8){display:none;}
   }
 </style>
 </head>
@@ -244,6 +343,8 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
+  <!-- Mobile card list -->
+  <div class="card-list" id="cardList"></div>
 </div>
 
 <!-- PAGE: LAGER -->
@@ -527,6 +628,8 @@ function renderTabela(){
     if(fu==="ne"&&kolicine[a.sifra]?.kol) return false;
     return true;
   });
+
+  renderCards(lista);  // mobile
   const hasLager=Object.keys(lagerData).length>0;
   // pokaži/sakrij lager kolone u headeru
   document.getElementById("thLager").style.display=hasLager?"":"none";
@@ -577,7 +680,96 @@ function renderTabela(){
   azurirajStat();
 }
 
-function chKol(el){
+function renderCards(lista){
+  const cl=document.getElementById("cardList");
+  if(!cl) return;
+  if(!lista.length){cl.innerHTML='<div style="text-align:center;padding:30px;color:var(--text-muted)">Nema artikala.</div>';return;}
+  cl.innerHTML="";
+  const hasLager=Object.keys(lagerData).length>0;
+  lista.forEach(a=>{
+    const st=kolicine[a.sifra]||{kol:"",napomena:""};
+    const v=st.kol&&parseFloat(st.kol)>0;
+    const lKol=lagerData[String(a.sifra)];
+    const p=v?parseFloat(st.kol):null;
+    const raz=(lKol!==undefined&&p!==null)?p-Number(lKol):null;
+
+    let razHtml='', cardExtra='';
+    if(hasLager&&lKol!==undefined){
+      if(raz===null) razHtml='';
+      else if(Math.abs(raz)<0.001) razHtml='<span style="color:var(--text-muted);font-size:11px">= lager</span>';
+      else if(raz<0){razHtml=`<span class="rm">▼ ${fmt2(raz)}</span>`;cardExtra='trm';}
+      else{razHtml=`<span class="rv">▲ +${fmt2(raz)}</span>`;cardExtra='trv';}
+    }
+
+    const card=document.createElement("div");
+    card.className=`art-card ${v?'has-value':''} ${cardExtra}`;
+
+    const lagerMeta2=hasLager&&lKol!==undefined
+      ?`<span class="card-lager">Lager: <strong>${fmt2(Number(lKol))}</strong></span>`
+      :'';
+
+    card.innerHTML=`
+      <div class="card-info">
+        <div class="card-naziv">${a.naziv}</div>
+        <div class="card-meta">
+          <span class="card-jm">${a.jm}</span>
+          <span style="color:var(--gold);font-size:11px">${fmt(a.cijena)} KM</span>
+          ${lagerMeta2}
+          <span class="card-razlika">${razHtml}</span>
+        </div>
+        ${v?`<div class="card-ukupno">= ${fmt(parseFloat(st.kol)*a.cijena)} KM</div>`:''}
+      </div>
+      <div class="card-input-wrap">
+        <input type="number" inputmode="decimal" class="card-qty ${v?'filled':''}"
+          data-sifra="${a.sifra}" value="${st.kol||''}" min="0" step="0.01"
+          placeholder="0" oninput="chKolCard(this)">
+      </div>`;
+    cl.appendChild(card);
+  });
+}
+
+function chKolCard(el){
+  // Sync s kolicine objektom i ažuriraj karticu
+  const s=el.dataset.sifra;
+  if(!kolicine[s]) kolicine[s]={kol:"",napomena:""};
+  kolicine[s].kol=el.value;
+  const a=ARTIKLI.find(x=>x.sifra==s);
+  const v=el.value&&parseFloat(el.value)>0;
+  const card=el.closest(".art-card");
+
+  if(v){
+    el.classList.add("filled");
+    card.classList.add("has-value");
+    // ukupno
+    let ukDiv=card.querySelector(".card-ukupno");
+    if(!ukDiv){ukDiv=document.createElement("div");ukDiv.className="card-ukupno";card.querySelector(".card-info").appendChild(ukDiv);}
+    ukDiv.textContent="= "+fmt(parseFloat(el.value)*a.cijena)+" KM";
+  } else {
+    el.classList.remove("filled");
+    card.classList.remove("has-value");
+    const ukDiv=card.querySelector(".card-ukupno");
+    if(ukDiv) ukDiv.remove();
+    kolicine[s].kol="";
+  }
+
+  // Razlika
+  const hasLager=Object.keys(lagerData).length>0;
+  const lKol=lagerData[String(s)];
+  if(hasLager&&lKol!==undefined){
+    const p=el.value?parseFloat(el.value):0;
+    const raz=p-Number(lKol);
+    let razHtml='';
+    card.classList.remove("trm","trv");
+    if(Math.abs(raz)<0.001) razHtml='<span style="color:var(--text-muted);font-size:11px">= lager</span>';
+    else if(raz<0){razHtml=`<span class="rm">▼ ${fmt2(raz)}</span>`;card.classList.add("trm");}
+    else{razHtml=`<span class="rv">▲ +${fmt2(raz)}</span>`;card.classList.add("trv");}
+    const razEl=card.querySelector(".card-razlika");
+    if(razEl) razEl.innerHTML=razHtml;
+  }
+  azurirajStat();
+}
+
+
   const s=el.dataset.sifra; if(!kolicine[s]) kolicine[s]={kol:"",napomena:""};
   kolicine[s].kol=el.value;
   const a=ARTIKLI.find(x=>x.sifra==s);
