@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Popis Šanka — Hotel Terme Ozren</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c9a84c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Popis Šanka">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<!-- Fonts & libs -->
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" onerror="console.warn('SheetJS nije učitan')"></script>
+<style>
+  :root {
+    --gold:#c9a84c;--gold-light:#e8cc7e;--gold-dark:#a07830;
+    --bg:#0f0e0c;--surface:#1a1814;--surface2:#231f1a;--surface3:#2d2820;
+    --border:rgba(201,168,76,0.2);--border-strong:rgba(201,168,76,0.5);
+    --text:#f0e8d8;--text-muted:#a09070;
+    --danger:#c0392b;--danger-bg:rgba(192,57,43,0.1);
+    --success:#27ae60;--success-bg:rgba(39,174,96,0.08);
+    --input-bg:#111;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Jost',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+  header{background:var(--surface);border-bottom:1px solid var(--border-strong);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+  .logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--gold);letter-spacing:.05em;}
+  .logo span{color:var(--text-muted);font-weight:400;font-size:13px;display:block;}
+
+  .main-tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:57px;z-index:99;overflow-x:auto;}
+  .main-tab{padding:12px 22px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--text-muted);transition:all .2s;font-family:'Jost',sans-serif;background:none;border-top:none;border-left:none;border-right:none;user-select:none;}
+  .main-tab:hover{color:var(--gold);}
+  .main-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+  .tab-badge{display:inline-block;margin-left:5px;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(192,57,43,0.2);color:#e74c3c;pointer-events:none;}
+
+  .container{max-width:1200px;margin:0 auto;padding:20px 16px 120px;}
+  .page{display:none;}.page.active{display:block;}
+
+  .btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-family:'Jost',sans-serif;font-size:13px;font-weight:500;transition:all .2s;display:inline-flex;align-items:center;gap:6px;}
+  .btn-gold{background:var(--gold);color:#0f0e0c;}.btn-gold:hover{background:var(--gold-light);}
+  .btn-outline{background:transparent;border:1px solid var(--border-strong);color:var(--gold);}.btn-outline:hover{background:var(--surface2);}
+  .btn-danger{background:transparent;border:1px solid rgba(192,57,43,.4);color:#e74c3c;}.btn-danger:hover{background:var(--danger-bg);}
+  .btn-success{background:var(--success);color:#fff;}.btn-success:hover{background:#2ecc71;}
+  .btn-sm{padding:6px 12px;font-size:12px;}
+
+  .top-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .date-group{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;}
+  .date-group label{font-size:12px;color:var(--text-muted);font-weight:500;}
+  .date-group input[type="date"]{background:transparent;border:none;color:var(--gold);font-family:'Jost',sans-serif;font-size:14px;font-weight:500;outline:none;cursor:pointer;}
+  .date-group input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.7) sepia(1) hue-rotate(5deg);}
+
+  .search-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .search-box{flex:1;min-width:200px;position:relative;}
+  .search-box input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 14px 9px 36px;color:var(--text);font-family:'Jost',sans-serif;font-size:14px;outline:none;transition:border-color .2s;}
+  .search-box input:focus{border-color:var(--gold);}
+  .search-box .icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;}
+  select.fs{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-family:'Jost',sans-serif;font-size:13px;outline:none;cursor:pointer;}
+  select.fs:focus{border-color:var(--gold);}
+
+  .tab-bar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .kat-tab{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-muted);transition:all .2s;font-family:'Jost',sans-serif;}
+  .kat-tab:hover{border-color:var(--gold);color:var(--gold);}
+  .kat-tab.active{background:var(--gold);color:#0f0e0c;border-color:var(--gold);}
+
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  table{width:100%;border-collapse:collapse;}
+  thead th{background:var(--surface2);padding:10px 12px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.07em;color:var(--gold);text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
+  tbody tr{border-bottom:1px solid rgba(201,168,76,.07);transition:background .15s;}
+  tbody tr:last-child{border-bottom:none;}
+  tbody tr:hover{background:var(--surface2);}
+  tbody tr.has-value{background:rgba(201,168,76,.04);}
+  tbody tr.has-value:hover{background:rgba(201,168,76,.09);}
+  td{padding:7px 12px;font-size:13px;vertical-align:middle;}
+  td.sifra{color:var(--text-muted);font-size:11px;font-family:monospace;}
+  td.jm{color:var(--text-muted);font-size:12px;text-align:center;}
+  td.cijena{color:var(--gold);font-weight:500;text-align:right;font-size:12px;}
+  td.qty-cell{width:110px;}
+  td.num-r{text-align:right;font-size:13px;}
+  td.ukupno-cell{text-align:right;font-weight:600;font-size:13px;color:var(--gold-light);min-width:90px;}
+  td.ukupno-cell.empty{color:transparent;}
+  .col-br{width:32px;text-align:center;color:var(--text-muted);font-size:11px;}
+  .empty-msg{text-align:center;padding:36px;color:var(--text-muted);font-size:14px;}
+
+  .qty-input{background:var(--input-bg);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-family:'Jost',sans-serif;font-size:14px;font-weight:500;width:78px;text-align:right;outline:none;transition:border-color .2s,box-shadow .2s;}
+  .qty-input:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,168,76,.15);}
+  .qty-input.filled{border-color:var(--gold-dark);background:rgba(201,168,76,.08);color:var(--gold-light);}
+
+  .napomena-input{background:transparent;border:none;border-bottom:1px dashed rgba(201,168,76,.2);color:var(--text-muted);font-family:'Jost',sans-serif;font-size:12px;width:100px;outline:none;padding:2px 4px;}
+  .napomena-input:focus{border-bottom-color:var(--gold);color:var(--text);}
+
+  /* LAGER PAGE */
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px;}
+  .panel h3{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--gold);margin-bottom:6px;}
+  .panel p{font-size:13px;color:var(--text-muted);margin-bottom:16px;}
+  .lager-status{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);font-size:13px;margin-bottom:16px;}
+  .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .dot-on{background:var(--success);box-shadow:0 0 6px var(--success);}
+  .dot-off{background:var(--text-muted);}
+  .lager-info small{color:var(--text-muted);font-size:11px;display:block;margin-top:2px;}
+  .upload-zone{border:2px dashed var(--border-strong);border-radius:10px;padding:30px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+  .upload-zone:hover{border-color:var(--gold);background:rgba(201,168,76,.04);}
+  .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .uz-icon{font-size:32px;margin-bottom:8px;}
+  .uz-text{font-size:14px;color:var(--text-muted);}
+  .uz-text strong{color:var(--gold);}
+
+  /* ANALIZA PAGE */
+  .a-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .a-header h2{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--gold);}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+  .sc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;}
+  .sc-label{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:5px;}
+  .sc-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;}
+  .sc-sub{font-size:12px;color:var(--text-muted);margin-top:2px;}
+  .sc.d{border-color:rgba(192,57,43,.4);}.sc.d .sc-val{color:#e74c3c;}
+  .sc.s{border-color:rgba(39,174,96,.3);}.sc.s .sc-val{color:var(--success);}
+  .sc.g .sc-val{color:var(--gold);}
+
+  .filt-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .fb{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-muted);transition:all .2s;font-family:'Jost',sans-serif;}
+  .fb:hover{border-color:var(--gold);color:var(--gold);}
+  .fb.active{background:var(--gold);color:#0f0e0c;border-color:var(--gold);}
+  .fb.fm.active{background:#c0392b;border-color:#c0392b;color:#fff;}
+  .fb.fv.active{background:var(--success);border-color:var(--success);color:#fff;}
+
+  .rm{color:#e74c3c;font-weight:600;}
+  .rv{color:var(--success);font-weight:600;}
+  .ro{color:var(--text-muted);}
+  tr.trm{background:rgba(192,57,43,.05)!important;}
+  tr.trv{background:rgba(39,174,96,.04)!important;}
+  .lnone{color:var(--text-muted);font-style:italic;font-size:12px;}
+  .th-lager{color:#7aadcc !important;} /* plava nijansa da se razlikuju od ostalih headera */
+  td.lager-col{color:var(--text-muted);font-size:12px;text-align:right;}
+
+
+  /* SUMMARY BAR */
+  .summary-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border-strong);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;z-index:100;flex-wrap:wrap;}
+  .ss{display:flex;gap:24px;flex-wrap:wrap;}
+  .st{display:flex;flex-direction:column;gap:2px;}
+  .stl{font-size:10px;letter-spacing:.07em;color:var(--text-muted);text-transform:uppercase;}
+  .stv{font-size:17px;font-weight:600;color:var(--gold);font-family:'Cormorant Garamond',serif;}
+  .stv.sm{font-size:14px;}
+
+  /* MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border-strong);border-radius:14px;padding:26px;width:90%;max-width:580px;max-height:82vh;overflow-y:auto;}
+  .modal h2{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--gold);margin-bottom:4px;}
+  .modal-sub{color:var(--text-muted);font-size:13px;margin-bottom:18px;}
+  .modal-table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+  .modal-table th{text-align:left;font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:.07em;padding:6px 8px;border-bottom:1px solid var(--border);}
+  .modal-table td{padding:7px 8px;font-size:13px;border-bottom:1px solid rgba(201,168,76,.06);}
+  .modal-table td:nth-child(2),.modal-table td:nth-child(3){text-align:right;}
+  .modal-table td:nth-child(3){color:var(--gold);font-weight:500;}
+  .modal-total{display:flex;justify-content:space-between;align-items:center;padding:12px 8px;border-top:1px solid var(--border-strong);margin-bottom:18px;}
+  .modal-total span:first-child{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
+  .modal-total span:last-child{font-size:24px;font-family:'Cormorant Garamond',serif;color:var(--gold);font-weight:700;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+
+  .toast{position:fixed;top:20px;right:20px;background:var(--surface2);border:1px solid var(--border-strong);border-radius:8px;padding:11px 16px;font-size:13px;color:var(--gold);z-index:999;opacity:0;transform:translateY(-10px);transition:all .3s;max-width:320px;}
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  @media print{
+    body{background:white;color:#1a1a1a;}
+    header,.main-tabs,.top-bar,.search-row,.tab-bar,.summary-bar,.filt-row,.a-header .btn,.no-print{display:none!important;}
+    .container{padding:0;max-width:100%;}
+    .page{display:none!important;}
+    .page.active{display:block!important;}
+    .table-wrap{border:1px solid #ccc;border-radius:0;}
+    thead th{background:#f5f5f5!important;color:#333;}
+    td{color:#1a1a1a;}
+    .rm{color:#c0392b;}.rv{color:#27ae60;}
+    .sc{border:1px solid #ddd;}
+    .stats-grid{grid-template-columns:repeat(4,1fr);}
+    .pt{display:block!important;text-align:center;margin-bottom:16px;font-size:18px;font-weight:bold;border-bottom:2px solid #333;padding-bottom:12px;}
+    #pagePopis tbody tr:not(.has-value){display:none!important;}
+    .qty-input{border:none!important;background:transparent!important;font-weight:600;text-align:right;width:auto;}
+    .napomena-input{border:none!important;background:transparent!important;}
+    .th-lager{display:none!important;}
+    #pagePopis td:nth-child(6),#pagePopis td:nth-child(8){display:none!important;}
+    #pageAnaliza tbody tr.row-nepopisan{display:none!important;}
+    .lnone{display:none;}
+  }
+  .card-list{display:none;}  /* vidljivo samo na mobitelu via media query */
+  .pt{display:none;}
+  /* ═══ MOBILE ═══════════════════════════════════════════ */
+  @media(max-width:600px){
+    /* Header kompaktniji */
+    header{padding:10px 14px;}
+    .logo{font-size:16px;}
+    .logo span{font-size:11px;}
+    #hDatum{display:none;}
+
+    /* Tabs manji */
+    .main-tab{padding:10px 12px;font-size:12px;}
+
+    /* Container bez bočnih margina */
+    .container{padding:12px 8px 140px;}
+
+    /* Top bar - složi vertikalno */
+    .top-bar{flex-direction:column;align-items:stretch;gap:8px;}
+    .date-group{justify-content:space-between;}
+    .top-bar-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+    /* Sakrij pretragu JM i filter unosa - ostavi samo pretragu i kat tabove */
+    #fJM,#fUnos{display:none;}
+
+    /* Kat tabovi - horizontalni scroll */
+    .tab-bar{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;gap:6px;-webkit-overflow-scrolling:touch;}
+    .tab-bar::-webkit-scrollbar{display:none;}
+    .kat-tab{white-space:nowrap;flex-shrink:0;}
+
+    /* ═══ SAKRIJ TABELU, PRIKAŽI KARTICE ═══ */
+    .table-wrap{display:none;}
+    .card-list{display:flex;}
+
+    /* CARD LIST */
+    .card-list{display:flex;flex-direction:column;gap:2px;}
+    .art-card{
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:12px 14px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      transition:background .15s;
+    }
+    .art-card.has-value{
+      background:rgba(201,168,76,0.07);
+      border-color:rgba(201,168,76,0.4);
+    }
+    .art-card.trm{border-left:3px solid #e74c3c;background:rgba(192,57,43,0.05);}
+    .art-card.trv{border-left:3px solid var(--success);background:rgba(39,174,96,0.04);}
+
+    .card-info{flex:1;min-width:0;}
+    .card-naziv{
+      font-size:14px;font-weight:500;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      color:var(--text);margin-bottom:3px;
+    }
+    .card-meta{
+      display:flex;align-items:center;gap:8px;
+      font-size:11px;color:var(--text-muted);
+    }
+    .card-jm{
+      background:var(--surface2);border-radius:4px;
+      padding:1px 6px;font-size:10px;font-weight:600;color:var(--gold);
+    }
+    .card-lager{font-size:11px;color:var(--text-muted);}
+    .card-razlika{font-size:12px;font-weight:600;}
+
+    .card-input-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+    .card-qty{
+      background:var(--input-bg);
+      border:2px solid var(--border);
+      border-radius:8px;
+      padding:8px 10px;
+      color:var(--text);
+      font-family:'Jost',sans-serif;
+      font-size:18px;
+      font-weight:600;
+      width:80px;
+      text-align:center;
+      outline:none;
+      -moz-appearance:textfield;
+    }
+    .card-qty::-webkit-inner-spin-button,
+    .card-qty::-webkit-outer-spin-button{-webkit-appearance:none;}
+    .card-qty:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,0.2);}
+    .card-qty.filled{border-color:var(--gold);background:rgba(201,168,76,0.1);color:var(--gold-light);}
+    .card-ukupno{font-size:11px;color:var(--gold);font-weight:600;text-align:right;}
+
+    /* Summary bar na mobitelu */
+    .summary-bar{padding:8px 12px;gap:8px;}
+    .ss{gap:12px;}
+    .stv{font-size:14px;}
+    .stv.sm{font-size:13px;}
+    .stl{font-size:9px;}
+
+    /* Stats grid 2 kolone */
+    .stats-grid{grid-template-columns:repeat(2,1fr);}
+
+    /* Analiza tabela - sakrij neke kolone */
+    #pageAnaliza td:nth-child(1),#pageAnaliza th:nth-child(1){display:none;}
+    #pageAnaliza td.sifra,#pageAnaliza th:nth-child(2){display:none;}
+    #pageAnaliza td:nth-child(8),#pageAnaliza th:nth-child(8){display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Hotel Terme Ozren<span>Popis Šanka &amp; Analiza Lagera</span></div>
+  <div style="font-family:'Cormorant Garamond',serif;font-size:15px;color:var(--text-muted)" id="hDatum"></div>
+</header>
+
+<div class="main-tabs">
+  <button class="main-tab active" id="tabPopis" onclick="gotoPage('popis')">📋 Popis šanka</button>
+  <button class="main-tab" onclick="gotoPage('lager')" id="tabLager">📦 Uvoz lagera</button>
+  <button class="main-tab" onclick="gotoPage('analiza')" id="tabAnaliza">📊 Analiza <span class="tab-badge" id="aBadge" style="display:none"></span></button>
+</div>
+
+<div class="container">
+
+<!-- PAGE: POPIS -->
+<div class="page active" id="pagePopis">
+  <div class="pt" id="ptPopis">Hotel Terme Ozren — Popis Šanka</div>
+  <div class="top-bar no-print">
+    <div class="date-group">
+      <label>Datum:</label>
+      <input type="date" id="datumInput">
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="ucitajPrethodni()">📂 Prethodni</button>
+    <button class="btn btn-danger btn-sm" onclick="obrisiPopis()">🗑 Obriši</button>
+    <div style="flex:1"></div>
+    <button class="btn btn-outline btn-sm" onclick="otvoriPregled()">📋 Pregled</button>
+    <button class="btn btn-outline btn-sm no-print" onclick="stampaj()">🖨 Štampaj</button>
+    <button class="btn btn-success" onclick="sacuvajPopis()">💾 Sačuvaj</button>
+  </div>
+  <div class="search-row no-print">
+    <div class="search-box"><span class="icon">🔍</span><input type="text" id="pretraga" placeholder="Pretraži artikle..." oninput="renderTabela()"></div>
+    <select class="fs" id="fJM" onchange="renderTabela()"><option value="">Sve JM</option><option value="Kom">Komad</option><option value="Lit">Litar</option><option value="Kg">Kg</option></select>
+    <select class="fs" id="fUnos" onchange="renderTabela()"><option value="">Svi</option><option value="da">Uneseni</option><option value="ne">Bez unosa</option></select>
+  </div>
+  <div class="tab-bar no-print" id="katBar"></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th class="col-br">#</th><th>Šifra</th><th>Naziv</th><th style="text-align:center">JM</th>
+        <th style="text-align:right">Cijena</th>
+        <th style="text-align:right" class="th-lager" id="thLager">Lager</th>
+        <th style="text-align:center">Popis (unos)</th>
+        <th style="text-align:right" class="th-lager" id="thRazlika">Razlika</th>
+        <th style="text-align:right">Ukupno</th><th>Napomena</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <!-- Mobile card list -->
+  <div class="card-list" id="cardList"></div>
+</div>
+
+<!-- PAGE: LAGER -->
+<div class="page" id="pageLager">
+  <div class="panel">
+    <h3>📦 Uvoz knjižnog lagera</h3>
+    <p>Uvezi XLS izvještaj iz Firmax sistema (RB-03-0290). Sistem automatski čita kolonu <strong>UKKOL_SLDX (AH)</strong> — krajnji saldo količina.</p>
+    <div class="lager-status">
+      <div class="dot dot-off" id="lDot"></div>
+      <div id="lInfo">Lager nije učitan.</div>
+    </div>
+    <div class="upload-zone">
+      <input type="file" id="lagerFile" accept=".xls,.xlsx" onchange="uvozLager(this)">
+      <div class="uz-icon">📂</div>
+      <div class="uz-text"><strong>Klikni ili prevuci XLS fajl</strong><br>Firmax izvještaj (RB-03-0290)</div>
+    </div>
+  </div>
+  <div id="lagerPreview" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold)">Učitani lager</div>
+      <button class="btn btn-danger btn-sm" onclick="obrisiLager()">🗑 Ukloni lager</button>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Šifra</th><th>Naziv</th><th>JM</th><th style="text-align:right">Lager kol.</th></tr></thead>
+      <tbody id="lTbody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: ANALIZA -->
+<div class="page" id="pageAnaliza">
+  <div class="pt">Hotel Terme Ozren — Analiza Lagera (Manjak / Višak)</div>
+  <div id="noData" style="text-align:center;padding:60px;color:var(--text-muted)">
+    <div style="font-size:40px;margin-bottom:12px">📊</div>
+    <div style="font-size:16px;margin-bottom:6px">Nema dovoljno podataka.</div>
+    <div style="font-size:13px">Unesi popis i uvezi lager da aktiviraš analizu.</div>
+    <div style="margin-top:20px;display:flex;gap:10px;justify-content:center">
+      <button class="btn btn-outline" onclick="gotoPage('popis')">→ Popis</button>
+      <button class="btn btn-gold" onclick="gotoPage('lager')">→ Uvezi lager</button>
+    </div>
+  </div>
+  <div id="analizaContent" style="display:none">
+    <div class="a-header">
+      <div>
+        <h2>Analiza manjka / viška</h2>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:2px" id="aSub"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" class="no-print">
+        <button class="btn btn-outline btn-sm" onclick="stampaj()">🖨 Štampaj</button>
+        <button class="btn btn-outline btn-sm" onclick="izvozAnalizaCSV()">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="stats-grid" id="sGrid"></div>
+    <div class="filt-row no-print">
+      <button class="fb active" onclick="setF('sve',this)">Svi</button>
+      <button class="fb fm" onclick="setF('manjak',this)">🔴 Manjak</button>
+      <button class="fb fv" onclick="setF('visenak',this)">🟢 Višak</button>
+      <button class="fb" onclick="setF('ok',this)">✓ Podudaranje</button>
+      <button class="fb" onclick="setF('nema',this)">⬜ Nepopisano</button>
+    </div>
+    <div class="search-row no-print" style="margin-bottom:14px">
+      <div class="search-box"><span class="icon">🔍</span><input type="text" id="aQ" placeholder="Pretraži..." oninput="renderAnaliza()"></div>
+      <select class="fs" id="aKat" onchange="renderAnaliza()"><option value="">Sve kategorije</option></select>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr>
+        <th class="col-br">#</th><th>Šifra</th><th>Naziv</th><th style="text-align:center">JM</th>
+        <th style="text-align:right">Lager (knjižno)</th>
+        <th style="text-align:right">Popis (stvarno)</th>
+        <th style="text-align:right">Razlika kol.</th>
+        <th style="text-align:right">Razlika KM</th>
+      </tr></thead>
+      <tbody id="aTbody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<div class="summary-bar no-print">
+  <div class="ss">
+    <div class="st"><span class="stl">Unesenih</span><span class="stv sm" id="sBroj">0 / 0</span></div>
+    <div class="st"><span class="stl">Vrijednost popisa</span><span class="stv" id="sUk">0,00 KM</span></div>
+    <div class="st" id="sManjakWrap" style="display:none"><span class="stl" style="color:#e74c3c">Vrijednost manjka</span><span class="stv sm" id="sManjak" style="color:#e74c3c">—</span></div>
+  </div>
+  <div><button class="btn btn-success" onclick="sacuvajPopis()">💾 Sačuvaj popis</button></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="mOverlay">
+  <div class="modal">
+    <h2>📋 Pregled popisa</h2>
+    <p class="modal-sub" id="mSub">—</p>
+    <table class="modal-table"><thead><tr><th>Naziv</th><th>Kol.</th><th>Ukupno</th></tr></thead><tbody id="mTbody"></tbody></table>
+    <div class="modal-total"><span>Ukupno:</span><span id="mUk">0,00 KM</span></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="zatvoriModal()">Zatvori</button>
+      <button class="btn btn-outline" onclick="izvozCSV()">⬇ CSV</button>
+      <button class="btn btn-gold" onclick="stampaj()">🖨 Štampaj</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const ARTIKLI=[
+  {sifra:11007,naziv:"Chardonnay 0.75 Vinarija Milojević",jm:"Kom",cijena:20,kat:"Vino"},
+  {sifra:11008,naziv:"Muskat Otonel 0.75 Vinarija Milojević",jm:"Kom",cijena:20,kat:"Vino"},
+  {sifra:11009,naziv:"Tamjanika 0.75 Vinarija Milojević",jm:"Kom",cijena:30,kat:"Vino"},
+  {sifra:11010,naziv:"Sauvignon Blanc 0.75 Vinarija Milojević",jm:"Kom",cijena:28,kat:"Vino"},
+  {sifra:11011,naziv:"Prokupac 0.75 Vinarija Milojević",jm:"Kom",cijena:20,kat:"Vino"},
+  {sifra:11012,naziv:"Cabernet Sauvignon 0.75 Vin Milojević",jm:"Kom",cijena:25,kat:"Vino"},
+  {sifra:11013,naziv:"Burgundac 0.75 Vinarija Milojević",jm:"Kom",cijena:20,kat:"Vino"},
+  {sifra:11014,naziv:"Rose 0.75 Vinarija Milojević",jm:"Kom",cijena:18,kat:"Vino"},
+  {sifra:11136,naziv:"Crna Tamjanika 0.75 Vinarija Milojević",jm:"Kom",cijena:28,kat:"Vino"},
+  {sifra:11137,naziv:"Traminac 0.75 Vinarija Milojević",jm:"Kom",cijena:28,kat:"Vino"},
+  {sifra:11187,naziv:"Temjanika Special Selection 0.75",jm:"Kom",cijena:38,kat:"Vino"},
+  {sifra:11203,naziv:"Giletovo belo",jm:"Kom",cijena:25,kat:"Vino"},
+  {sifra:11228,naziv:"Vino Milojević - Anika 0.75",jm:"Kom",cijena:28,kat:"Vino"},
+  {sifra:11229,naziv:"Vino Milojević - Alisa 0.75",jm:"Kom",cijena:28,kat:"Vino"},
+  {sifra:11230,naziv:"Vino Milojević - Arsenije 0.75",jm:"Kom",cijena:30,kat:"Vino"},
+  {sifra:11246,naziv:"Vino Alisa Milojević 0.187",jm:"Kom",cijena:6.5,kat:"Vino"},
+  {sifra:11141,naziv:"Tikveš Chardonnay 0.75l",jm:"Kom",cijena:35,kat:"Vino"},
+  {sifra:11142,naziv:"Tikveš Bela Voda 0.75l",jm:"Kom",cijena:80,kat:"Vino"},
+  {sifra:11143,naziv:"Tikveš Jolie Ballade 0.75l",jm:"Kom",cijena:45,kat:"Vino"},
+  {sifra:11144,naziv:"Tikveš Rose 0.75l",jm:"Kom",cijena:40,kat:"Vino"},
+  {sifra:11145,naziv:"Tikveš Cabernet Sauvignon 0.75l",jm:"Kom",cijena:35,kat:"Vino"},
+  {sifra:11146,naziv:"Tikveš bijelo kuve 0.75l",jm:"Kom",cijena:45,kat:"Vino"},
+  {sifra:11149,naziv:"Tikveš Aleks. Crv. Kuve 0.75",jm:"Kom",cijena:40,kat:"Vino"},
+  {sifra:11218,naziv:"Tikveš Žilavka 0.75 Bela Voda",jm:"Kom",cijena:80,kat:"Vino"},
+  {sifra:11231,naziv:"Kovačević Aurelius 0.75l",jm:"Kom",cijena:60,kat:"Vino"},
+  {sifra:11232,naziv:"Kovačević Chardonnay 0.75l",jm:"Kom",cijena:55,kat:"Vino"},
+  {sifra:11237,naziv:"Žilavka Andrija Vrhunsko 0.75",jm:"Kom",cijena:35,kat:"Vino"},
+  {sifra:11238,naziv:"Žilavka Andrija 0.75 Selekcija",jm:"Kom",cijena:50,kat:"Vino"},
+  {sifra:11241,naziv:"Malvazija Deklić 0.75",jm:"Kom",cijena:55,kat:"Vino"},
+  {sifra:11105,naziv:"Kupinovo vino 0.187",jm:"Kom",cijena:6,kat:"Vino"},
+  {sifra:11188,naziv:"Aleksandrija bijela 0.187",jm:"Kom",cijena:6.5,kat:"Vino"},
+  {sifra:11189,naziv:"Temjanika bijela 0.187",jm:"Kom",cijena:7,kat:"Vino"},
+  {sifra:11190,naziv:"T-ga za jug 0.187",jm:"Kom",cijena:6,kat:"Vino"},
+  {sifra:11193,naziv:"Vino na litar Rose M.",jm:"Lit",cijena:37.38,kat:"Vino"},
+  {sifra:11194,naziv:"Vino na litar Traminac M.",jm:"Lit",cijena:42.06,kat:"Vino"},
+  {sifra:11196,naziv:"Vino na litar Temjanika Spec. Selection",jm:"Lit",cijena:46.73,kat:"Vino"},
+  {sifra:11197,naziv:"Vino na litar Tikveš Cab. Sauvignon",jm:"Lit",cijena:46.73,kat:"Vino"},
+  {sifra:11225,naziv:"Crna Tamjanika M. - na litar",jm:"Lit",cijena:42.06,kat:"Vino"},
+  {sifra:11227,naziv:"Giletovo belo vino - čaša",jm:"Lit",cijena:37.38,kat:"Vino"},
+  {sifra:11240,naziv:"Tamjanika Milojević čaša",jm:"Lit",cijena:46.73,kat:"Vino"},
+  {sifra:11076,naziv:"Jelen pivo 0.33 FL",jm:"Kom",cijena:4,kat:"Pivo"},
+  {sifra:11092,naziv:"Jelen pivo točeno 0.50",jm:"Lit",cijena:8.54,kat:"Pivo"},
+  {sifra:11098,naziv:"Staropramen 0.33",jm:"Kom",cijena:4,kat:"Pivo"},
+  {sifra:11099,naziv:"Nikšićko 0.33",jm:"Kom",cijena:4,kat:"Pivo"},
+  {sifra:11101,naziv:"Bavaria 0.25",jm:"Kom",cijena:3.5,kat:"Pivo"},
+  {sifra:11102,naziv:"Bavaria 0% Alc",jm:"Kom",cijena:3.5,kat:"Pivo"},
+  {sifra:11180,naziv:"Becks 0.33",jm:"Kom",cijena:4,kat:"Pivo"},
+  {sifra:11182,naziv:"Corona Extra 0.355",jm:"Kom",cijena:5,kat:"Pivo"},
+  {sifra:11274,naziv:"Madri 0.33",jm:"Kom",cijena:4,kat:"Pivo"},
+  {sifra:11116,naziv:"Somersby Jabuka 0.33",jm:"Kom",cijena:5,kat:"Pivo"},
+  {sifra:11117,naziv:"Somersby Kruška 0.33",jm:"Kom",cijena:5,kat:"Pivo"},
+  {sifra:11222,naziv:"Cidar Aspall 0.33",jm:"Kom",cijena:4,kat:"Pivo"},
+  {sifra:11120,naziv:"Viljamovka",jm:"Lit",cijena:116.66,kat:"Rakija"},
+  {sifra:11127,naziv:"Vinjak",jm:"Lit",cijena:150,kat:"Rakija"},
+  {sifra:11128,naziv:"Stock",jm:"Lit",cijena:83.33,kat:"Rakija"},
+  {sifra:11131,naziv:"Dunja",jm:"Lit",cijena:116.66,kat:"Rakija"},
+  {sifra:11132,naziv:"Kajsija",jm:"Lit",cijena:116.66,kat:"Rakija"},
+  {sifra:11133,naziv:"Šljiva",jm:"Lit",cijena:116.66,kat:"Rakija"},
+  {sifra:11134,naziv:"Vlahov",jm:"Lit",cijena:116.66,kat:"Rakija"},
+  {sifra:11156,naziv:"Pelinkovac 0.03",jm:"Lit",cijena:116.66,kat:"Rakija"},
+  {sifra:11161,naziv:"Rum",jm:"Lit",cijena:116.66,kat:"Rakija"},
+  {sifra:11164,naziv:"Iva Gostiljska rakija",jm:"Lit",cijena:133.33,kat:"Rakija"},
+  {sifra:11204,naziv:"Travarica",jm:"Lit",cijena:150,kat:"Rakija"},
+  {sifra:11205,naziv:"Loza",jm:"Lit",cijena:116.66,kat:"Rakija"},
+  {sifra:11217,naziv:"Rakija Jabuka",jm:"Lit",cijena:100,kat:"Rakija"},
+  {sifra:11239,naziv:"Rakija Šljiva Dinastija",jm:"Lit",cijena:133.32,kat:"Rakija"},
+  {sifra:11242,naziv:"Kajsija Zekić 0.2l",jm:"Kom",cijena:30,kat:"Rakija"},
+  {sifra:11243,naziv:"Dunja Zekić 0.2l",jm:"Kom",cijena:30,kat:"Rakija"},
+  {sifra:11244,naziv:"Viljamovka Zekić 0.2l",jm:"Kom",cijena:30,kat:"Rakija"},
+  {sifra:11245,naziv:"Šljiva Zekić 0.2l",jm:"Kom",cijena:23,kat:"Rakija"},
+  {sifra:11083,naziv:"Džin 0.03",jm:"Lit",cijena:116.66,kat:"Žestoka pića"},
+  {sifra:11121,naziv:"Johnnie Walker",jm:"Lit",cijena:150,kat:"Žestoka pića"},
+  {sifra:11122,naziv:"Chivas",jm:"Lit",cijena:200,kat:"Žestoka pića"},
+  {sifra:11123,naziv:"Jack Daniels",jm:"Lit",cijena:216.66,kat:"Žestoka pića"},
+  {sifra:11124,naziv:"Smirnoff Vodka",jm:"Lit",cijena:150,kat:"Žestoka pića"},
+  {sifra:11126,naziv:"Pushkin Vodka",jm:"Lit",cijena:133.32,kat:"Žestoka pića"},
+  {sifra:11129,naziv:"Baileys",jm:"Lit",cijena:150,kat:"Žestoka pića"},
+  {sifra:11130,naziv:"Jägermeister",jm:"Lit",cijena:133.33,kat:"Žestoka pića"},
+  {sifra:11135,naziv:"Gorki List",jm:"Lit",cijena:133.33,kat:"Žestoka pića"},
+  {sifra:11154,naziv:"Bacardi 0.03",jm:"Lit",cijena:133.33,kat:"Žestoka pića"},
+  {sifra:11155,naziv:"Konjak 0.03",jm:"Lit",cijena:133.33,kat:"Žestoka pića"},
+  {sifra:11158,naziv:"Konjak Hennessy",jm:"Lit",cijena:200,kat:"Žestoka pića"},
+  {sifra:11159,naziv:"Tequila",jm:"Lit",cijena:150,kat:"Žestoka pića"},
+  {sifra:11160,naziv:"Martini Bianco",jm:"Lit",cijena:150,kat:"Žestoka pića"},
+  {sifra:11070,naziv:"Coca Cola 0.25 Staklo",jm:"Kom",cijena:4,kat:"Bezalkoholna"},
+  {sifra:11071,naziv:"Coca Cola Zero 0.25 Staklo",jm:"Kom",cijena:4,kat:"Bezalkoholna"},
+  {sifra:11072,naziv:"Fanta 0.25 Staklo",jm:"Kom",cijena:4,kat:"Bezalkoholna"},
+  {sifra:11074,naziv:"Schweppes Tonic Water 0.25",jm:"Kom",cijena:4,kat:"Bezalkoholna"},
+  {sifra:11075,naziv:"Sprite 0.25 Staklo",jm:"Kom",cijena:4,kat:"Bezalkoholna"},
+  {sifra:11020,naziv:"Schweppes Tangerine 0.25",jm:"Kom",cijena:4,kat:"Bezalkoholna"},
+  {sifra:11097,naziv:"Schweppes Bitter Lemon 0.25",jm:"Kom",cijena:4,kat:"Bezalkoholna"},
+  {sifra:11023,naziv:"Red Bull 0.25",jm:"Kom",cijena:5,kat:"Bezalkoholna"},
+  {sifra:11057,naziv:"Vivia 0.25 Staklo",jm:"Kom",cijena:3,kat:"Bezalkoholna"},
+  {sifra:11058,naziv:"Vitinka Min. Voda 0.25 Staklo",jm:"Kom",cijena:3,kat:"Bezalkoholna"},
+  {sifra:11059,naziv:"Vivia 0.75",jm:"Kom",cijena:5.5,kat:"Bezalkoholna"},
+  {sifra:11061,naziv:"Vivia Limun 0.25 Staklo",jm:"Kom",cijena:3,kat:"Bezalkoholna"},
+  {sifra:11063,naziv:"Vitinka Exotic Limeta 0.25",jm:"Kom",cijena:3,kat:"Bezalkoholna"},
+  {sifra:11095,naziv:"Vitinka Min. Voda 0.75 Staklo",jm:"Kom",cijena:5.5,kat:"Bezalkoholna"},
+  {sifra:11096,naziv:"Vitinka Exotic Kruška 0.25",jm:"Kom",cijena:3.5,kat:"Bezalkoholna"},
+  {sifra:11163,naziv:"Cockta 0.275",jm:"Kom",cijena:4,kat:"Bezalkoholna"},
+  {sifra:11184,naziv:"Orangina 0.25",jm:"Kom",cijena:4,kat:"Bezalkoholna"},
+  {sifra:11185,naziv:"Ledeni Čaj 0.25",jm:"Kom",cijena:4,kat:"Bezalkoholna"},
+  {sifra:11119,naziv:"Cedevita 19gr",jm:"Kom",cijena:4,kat:"Bezalkoholna"},
+  {sifra:11201,naziv:"Koktel 0.33",jm:"Kom",cijena:6,kat:"Bezalkoholna"},
+  {sifra:11226,naziv:"Hidra ISO 0.5",jm:"Kom",cijena:4,kat:"Bezalkoholna"},
+  {sifra:11210,naziv:"Macho Vanilija",jm:"Kom",cijena:3.5,kat:"Bezalkoholna"},
+  {sifra:11064,naziv:"Jabuka Fructal 0.20 Staklo",jm:"Kom",cijena:4,kat:"Sokovi"},
+  {sifra:11065,naziv:"Jagoda Fructal 0.20 Staklo",jm:"Kom",cijena:4,kat:"Sokovi"},
+  {sifra:11066,naziv:"Breskva Fructal 0.20 Staklo",jm:"Kom",cijena:4,kat:"Sokovi"},
+  {sifra:11067,naziv:"Djus Fructal 0.20 Staklo",jm:"Kom",cijena:4,kat:"Sokovi"},
+  {sifra:11068,naziv:"Borovnica Fructal 0.20 Staklo",jm:"Kom",cijena:4,kat:"Sokovi"},
+  {sifra:11036,naziv:"Espresso kafa",jm:"Kom",cijena:2.7,kat:"Topli napici"},
+  {sifra:11037,naziv:"Čaj",jm:"Kom",cijena:2.4,kat:"Topli napici"},
+  {sifra:11043,naziv:"Nescafe Classic",jm:"Kom",cijena:2.4,kat:"Topli napici"},
+  {sifra:11055,naziv:"Topla Čokolada",jm:"Kom",cijena:2.9,kat:"Topli napici"},
+  {sifra:11056,naziv:"Cappuccino",jm:"Kom",cijena:2.4,kat:"Topli napici"},
+  {sifra:11104,naziv:"Kafa Black Easy",jm:"Kom",cijena:2.8,kat:"Topli napici"},
+  {sifra:20056,naziv:"Mlijeko",jm:"Lit",cijena:6,kat:"Topli napici"},
+  {sifra:20108,naziv:"Limun",jm:"Kg",cijena:8.55,kat:"Ostalo"},
+  {sifra:20176,naziv:"Šećer 5gr",jm:"Kom",cijena:0.1,kat:"Ostalo"},
+  {sifra:20319,naziv:"Sladoled Ledo kugla",jm:"Lit",cijena:20.83,kat:"Ostalo"},
+];
+const KATEGORIJE=["Sve","Vino","Pivo","Rakija","Žestoka pića","Bezalkoholna","Sokovi","Topli napici","Ostalo"];
+
+let aktivnaKat="Sve", kolicine={}, lagerData={}, lagerMeta=null, datum="", aFilter="sve";
+
+function init(){
+  try{
+    const d=new Date().toISOString().split("T")[0];
+    document.getElementById("datumInput").value=d; datum=d;
+    azurirajDatum();
+    document.getElementById("datumInput").addEventListener("change",function(){datum=this.value;azurirajDatum();ucitajPopis();});
+    KATEGORIJE.filter(k=>k!=="Sve").forEach(k=>{
+      const o=document.createElement("option");o.value=k;o.textContent=k;
+      document.getElementById("aKat").appendChild(o);
+    });
+    renderKatBar(); renderTabela(); ucitajPopis(); ucitajLagerStorage();
+  }catch(e){
+    console.error("Init greška:",e);
+    // Pokušaj ponovo nakon 300ms (čeka DOM)
+    setTimeout(()=>{
+      const d=new Date().toISOString().split("T")[0];
+      datum=d;
+      try{document.getElementById("datumInput").value=d;}catch(x){}
+      renderKatBar(); renderTabela(); ucitajPopis(); ucitajLagerStorage();
+    },300);
+  }
+}
+function azurirajDatum(){
+  const d=new Date(datum+"T00:00:00");
+  document.getElementById("hDatum").textContent=d.toLocaleDateString("bs-BA",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+}
+
+function gotoPage(p){
+  document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".main-tab").forEach(x=>x.classList.remove("active"));
+  const pg=document.getElementById("page"+p.charAt(0).toUpperCase()+p.slice(1));
+  if(pg) pg.classList.add("active");
+  const tabMap={popis:"tabPopis",lager:"tabLager",analiza:"tabAnaliza"};
+  const tabEl=document.getElementById(tabMap[p]);
+  if(tabEl) tabEl.classList.add("active");
+  if(p==="analiza") renderAnaliza();
+}
+
+function renderKatBar(){
+  const bar=document.getElementById("katBar"); bar.innerHTML="";
+  KATEGORIJE.forEach(k=>{
+    const n=k==="Sve"?ARTIKLI.length:ARTIKLI.filter(a=>a.kat===k).length;
+    const b=document.createElement("button"); b.className="kat-tab"+(k===aktivnaKat?" active":"");
+    b.innerHTML=k+` <span style="opacity:.7;font-size:10px">${n}</span>`;
+    b.onclick=()=>{aktivnaKat=k;renderKatBar();renderTabela();};
+    bar.appendChild(b);
+  });
+}
+
+function renderTabela(){
+  const q=document.getElementById("pretraga").value.toLowerCase();
+  const jm=document.getElementById("fJM").value;
+  const fu=document.getElementById("fUnos").value;
+  const lista=ARTIKLI.filter(a=>{
+    if(aktivnaKat!=="Sve"&&a.kat!==aktivnaKat) return false;
+    if(jm&&a.jm!==jm) return false;
+    if(q&&!a.naziv.toLowerCase().includes(q)&&!String(a.sifra).includes(q)) return false;
+    if(fu==="da"&&!(kolicine[a.sifra]?.kol)) return false;
+    if(fu==="ne"&&kolicine[a.sifra]?.kol) return false;
+    return true;
+  });
+
+  renderCards(lista);  // mobile
+  const hasLager=Object.keys(lagerData).length>0;
+  // pokaži/sakrij lager kolone u headeru
+  document.getElementById("thLager").style.display=hasLager?"":"none";
+  document.getElementById("thRazlika").style.display=hasLager?"":"none";
+
+  const tbody=document.getElementById("tbody");
+  const colspan=hasLager?10:8;
+  if(!lista.length){tbody.innerHTML=`<tr><td colspan="${colspan}" class="empty-msg">Nema artikala.</td></tr>`;azurirajStat();return;}
+  tbody.innerHTML="";
+  lista.forEach((a,i)=>{
+    const st=kolicine[a.sifra]||{kol:"",napomena:""};
+    const v=st.kol&&parseFloat(st.kol)>0;
+    const uk=v?parseFloat(st.kol)*a.cijena:0;
+    const lKol=lagerData[String(a.sifra)];
+    const hasL=lKol!==undefined;
+    // razlika: popis - lager (negativno = manjak)
+    const p=v?parseFloat(st.kol):null;
+    const raz=(hasL&&p!==null)?p-Number(lKol):null;
+    let razHtml='', trExtra='';
+    if(hasL){
+      if(raz===null) razHtml='<span class="lnone">—</span>';
+      else if(Math.abs(raz)<0.001) razHtml='<span style="color:var(--text-muted)">= 0</span>';
+      else if(raz<0) razHtml=`<span class="rm">▼ ${fmt2(raz)}</span>`;
+      else razHtml=`<span class="rv">▲ +${fmt2(raz)}</span>`;
+      if(raz!==null&&raz<-0.001) trExtra='trm';
+      else if(raz!==null&&raz>0.001) trExtra='trv';
+    }
+
+    const tr=document.createElement("tr");
+    if(v) tr.classList.add("has-value");
+    if(trExtra) tr.classList.add(trExtra);
+
+    const lagerTd=hasLager
+      ?`<td class="num-r" style="color:var(--text-muted);font-size:12px">${hasL?fmt2(Number(lKol)):'<span class="lnone">—</span>'}</td>`
+      :'';
+    const razlikaTd=hasLager
+      ?`<td class="num-r" id="raz_${a.sifra}">${razHtml}</td>`
+      :'';
+
+    tr.innerHTML=`<td class="col-br">${i+1}</td><td class="sifra">${a.sifra}</td><td>${a.naziv}</td><td class="jm">${a.jm}</td><td class="cijena">${fmt(a.cijena)}</td>
+      ${lagerTd}
+      <td class="qty-cell"><input type="number" class="qty-input ${v?'filled':''}" data-sifra="${a.sifra}" value="${st.kol}" min="0" step="0.01" placeholder="0" oninput="chKol(this)"></td>
+      ${razlikaTd}
+      <td class="ukupno-cell ${!v?'empty':''}" id="uk_${a.sifra}">${v?fmt(uk)+' KM':'—'}</td>
+      <td class="napomena-cell"><input type="text" class="napomena-input" data-sifra="${a.sifra}" value="${st.napomena||''}" placeholder="napomena..." onchange="chNap(this)"></td>`;
+    tbody.appendChild(tr);
+  });
+  azurirajStat();
+}
+
+function renderCards(lista){
+  try{
+  const cl=document.getElementById("cardList");
+  if(!cl) return;
+  if(!lista.length){cl.innerHTML='<div style="text-align:center;padding:30px;color:var(--text-muted)">Nema artikala.</div>';return;}
+  cl.innerHTML="";
+  const hasLager=Object.keys(lagerData).length>0;
+  lista.forEach(a=>{
+    const st=kolicine[a.sifra]||{kol:"",napomena:""};
+    const v=st.kol&&parseFloat(st.kol)>0;
+    const lKol=lagerData[String(a.sifra)];
+    const p=v?parseFloat(st.kol):null;
+    const raz=(lKol!==undefined&&p!==null)?p-Number(lKol):null;
+
+    let razHtml='', cardExtra='';
+    if(hasLager&&lKol!==undefined){
+      if(raz===null) razHtml='';
+      else if(Math.abs(raz)<0.001) razHtml='<span style="color:var(--text-muted);font-size:11px">= lager</span>';
+      else if(raz<0){razHtml=`<span class="rm">▼ ${fmt2(raz)}</span>`;cardExtra='trm';}
+      else{razHtml=`<span class="rv">▲ +${fmt2(raz)}</span>`;cardExtra='trv';}
+    }
+
+    const card=document.createElement("div");
+    card.className=`art-card ${v?'has-value':''} ${cardExtra}`;
+
+    const lagerMeta2=hasLager&&lKol!==undefined
+      ?`<span class="card-lager">Lager: <strong>${fmt2(Number(lKol))}</strong></span>`
+      :'';
+
+    card.innerHTML=`
+      <div class="card-info">
+        <div class="card-naziv">${a.naziv}</div>
+        <div class="card-meta">
+          <span class="card-jm">${a.jm}</span>
+          <span style="color:var(--gold);font-size:11px">${fmt(a.cijena)} KM</span>
+          ${lagerMeta2}
+          <span class="card-razlika">${razHtml}</span>
+        </div>
+        ${v?`<div class="card-ukupno">= ${fmt(parseFloat(st.kol)*a.cijena)} KM</div>`:''}
+      </div>
+      <div class="card-input-wrap">
+        <input type="number" inputmode="decimal" class="card-qty ${v?'filled':''}"
+          data-sifra="${a.sifra}" value="${st.kol||''}" min="0" step="0.01"
+          placeholder="0" oninput="chKolCard(this)">
+      </div>`;
+    cl.appendChild(card);
+  });
+  }catch(e){console.error("renderCards greška:",e);}
+}
+
+function chKolCard(el){
+  // Sync s kolicine objektom i ažuriraj karticu
+  const s=el.dataset.sifra;
+  if(!kolicine[s]) kolicine[s]={kol:"",napomena:""};
+  kolicine[s].kol=el.value;
+  const a=ARTIKLI.find(x=>x.sifra==s);
+  const v=el.value&&parseFloat(el.value)>0;
+  const card=el.closest(".art-card");
+
+  if(v){
+    el.classList.add("filled");
+    card.classList.add("has-value");
+    // ukupno
+    let ukDiv=card.querySelector(".card-ukupno");
+    if(!ukDiv){ukDiv=document.createElement("div");ukDiv.className="card-ukupno";card.querySelector(".card-info").appendChild(ukDiv);}
+    ukDiv.textContent="= "+fmt(parseFloat(el.value)*a.cijena)+" KM";
+  } else {
+    el.classList.remove("filled");
+    card.classList.remove("has-value");
+    const ukDiv=card.querySelector(".card-ukupno");
+    if(ukDiv) ukDiv.remove();
+    kolicine[s].kol="";
+  }
+
+  // Razlika
+  const hasLager=Object.keys(lagerData).length                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
