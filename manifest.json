@@ -1,0 +1,26 @@
+{
+  "name": "Popis Šanka — Hotel Terme Ozren",
+  "short_name": "Popis Šanka",
+  "description": "Svakodnevni popis šanka i analiza lagera",
+  "start_url": "./popis_sanka.html",
+  "display": "standalone",
+  "background_color": "#0f0e0c",
+  "theme_color": "#c9a84c",
+  "orientation": "portrait-primary",
+  "lang": "bs",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business"]
+}
