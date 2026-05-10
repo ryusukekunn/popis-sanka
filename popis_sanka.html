@@ -873,14 +873,25 @@ function uvozLager(input){
   const reader=new FileReader();
   reader.onload=function(e){
     try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+      const data = e.target.result;
+      let wb;
+      // Pokušaj različite načine parsiranja
+      const opts = {type:"array", cellDates:false, cellNF:false, cellText:false, WTF:false};
+      try { wb = XLSX.read(new Uint8Array(data), opts); }
+      catch(e1){
+        try { wb = XLSX.read(data, {type:"binary"}); }
+        catch(e2){ throw new Error("Ne mogu čitati fajl: "+e1.message); }
+      }
 
-      // Pronađi header red — traži red koji sadrži 'ART' ili 'UKKOL'
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true});
+
+      if(!rows.length){ showToast("Fajl je prazan."); return; }
+
+      // Pronađi header red po imenu kolone
       let headerRow=-1, colArt=-1, colUkkol=-1;
       for(let i=0;i<Math.min(rows.length,20);i++){
-        const r=rows[i];
+        const r=rows[i]; if(!r) continue;
         for(let j=0;j<r.length;j++){
           const v=String(r[j]||'').trim().toUpperCase();
           if(v==='ART') colArt=j;
@@ -889,7 +900,7 @@ function uvozLager(input){
         if(colArt>=0 && colUkkol>=0){headerRow=i; break;}
       }
 
-      // Fallback na poznate indekse ako header nije nađen
+      // Fallback na poznate indekse
       if(colArt<0) colArt=22;
       if(colUkkol<0) colUkkol=33;
       const start = headerRow>=0 ? headerRow+1 : 3;
@@ -897,12 +908,14 @@ function uvozLager(input){
       lagerData={};let n=0;
       const lagerOrder=[];
       for(let i=start;i<rows.length;i++){
-        const r=rows[i];
+        const r=rows[i]; if(!r) continue;
         const s=r[colArt];
         const k=r[colUkkol];
-        if(s&&!isNaN(Number(s))&&k!==null&&k!==undefined&&!isNaN(Number(k))){
-          lagerData[String(Math.round(Number(s)))]=Number(k);
-          lagerOrder.push(String(Math.round(Number(s))));
+        const sNum = parseFloat(String(s||'').replace(',','.'));
+        const kNum = parseFloat(String(k||'').replace(',','.'));
+        if(s && !isNaN(sNum) && sNum>0 && k!==null && k!==undefined && !isNaN(kNum)){
+          lagerData[String(Math.round(sNum))]=kNum;
+          lagerOrder.push(String(Math.round(sNum)));
           n++;
         }
       }
@@ -911,9 +924,13 @@ function uvozLager(input){
       lagerMeta={naziv:file.name,n,dat:new Date().toLocaleDateString("bs-BA")};
       localStorage.setItem("ld",JSON.stringify(lagerData));
       localStorage.setItem("lm",JSON.stringify(lagerMeta));
-      primijeniLagerSort(lagerOrder);
-      azurirajLagerUI(); renderLagerPreview(); azurirajBadge(); azurirajStat();
-      showToast("✓ Lager učitan: "+n+" artikala (ART:kol"+colArt+", UKKOL:kol"+colUkkol+")");
+      if(n>0){
+        primijeniLagerSort(lagerOrder);
+        azurirajLagerUI(); renderLagerPreview(); azurirajBadge(); azurirajStat();
+        showToast("✓ Lager učitan: "+n+" artikala");
+      } else {
+        showToast("⚠ Nađeno 0 artikala. Header row: "+headerRow+", ART kol: "+colArt+", UKKOL kol: "+colUkkol+", ukupno redova: "+rows.length);
+      }
     }catch(err){showToast("Greška: "+err.message);}
   };
   reader.readAsArrayBuffer(file); input.value="";
