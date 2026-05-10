@@ -275,7 +275,16 @@
     .card-qty::-webkit-outer-spin-button{-webkit-appearance:none;}
     .card-qty:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,0.2);}
     .card-qty.filled{border-color:var(--gold);background:rgba(201,168,76,0.1);color:var(--gold-light);}
-    .card-ukupno{font-size:11px;color:var(--gold);font-weight:600;text-align:right;}
+    .card-ukupno{font-size:12px;color:var(--gold);font-weight:600;margin-top:3px;}
+    .card-lager-row{
+      display:flex;align-items:center;gap:6px;
+      margin-top:5px;padding:4px 8px;
+      background:rgba(201,168,76,0.08);
+      border-radius:6px;font-size:12px;
+    }
+    .card-lager-label{color:var(--text-muted);}
+    .card-lager-val{font-weight:700;color:var(--text);}
+    .card-razlika{font-size:12px;font-weight:700;margin-left:auto;}
 
     /* Summary bar na mobitelu */
     .summary-bar{padding:8px 12px;gap:8px;}
@@ -716,9 +725,13 @@ function renderCards(lista){
     const card=document.createElement("div");
     card.className=`art-card ${v?'has-value':''} ${cardExtra}`;
 
-    const lagerMeta2=hasLager&&lKol!==undefined
-      ?`<span class="card-lager">Lager: <strong>${fmt2(Number(lKol))}</strong></span>`
-      :'';
+    const lagerRedak = hasLager && lKol !== undefined
+      ? `<div class="card-lager-row">
+           <span class="card-lager-label">Lager:</span>
+           <span class="card-lager-val">${fmt2(Number(lKol))} ${a.jm}</span>
+           ${razHtml ? `<span class="card-razlika">${razHtml}</span>` : ''}
+         </div>`
+      : '';
 
     card.innerHTML=`
       <div class="card-info">
@@ -726,9 +739,8 @@ function renderCards(lista){
         <div class="card-meta">
           <span class="card-jm">${a.jm}</span>
           <span style="color:var(--gold);font-size:11px">${fmt(a.cijena)} KM</span>
-          ${lagerMeta2}
-          <span class="card-razlika">${razHtml}</span>
         </div>
+        ${lagerRedak}
         ${v?`<div class="card-ukupno">= ${fmt(parseFloat(st.kol)*a.cijena)} KM</div>`:''}
       </div>
       <div class="card-input-wrap">
@@ -776,8 +788,7 @@ function chKolCard(el){
     if(Math.abs(raz)<0.001) razHtml='<span style="color:var(--text-muted);font-size:11px">= lager</span>';
     else if(raz<0){razHtml=`<span class="rm">▼ ${fmt2(raz)}</span>`;card.classList.add("trm");}
     else{razHtml=`<span class="rv">▲ +${fmt2(raz)}</span>`;card.classList.add("trv");}
-    const razEl=card.querySelector(".card-razlika");
-    if(razEl) razEl.innerHTML=razHtml;
+    const razEl=card.querySelector(".card-razlika");    if(razEl) razEl.innerHTML=razHtml;
   }
   azurirajStat();
 }
