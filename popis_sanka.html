@@ -371,6 +371,36 @@
       <div class="uz-text"><strong>Klikni ili prevuci XLS fajl</strong><br>Firmax izvještaj (RB-03-0290)</div>
     </div>
   </div>
+
+  <!-- GIST SYNC PANEL -->
+  <div class="panel" id="gistPanel">
+    <h3>☁️ Sync između uređaja</h3>
+    <p>Uveži GitHub Gist da dijeliš lager između računara i telefona. Jednokratno podešavanje.</p>
+
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">GitHub Personal Access Token</label>
+      <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx"
+        style="width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:monospace;font-size:13px;outline:none;"
+        oninput="localStorage.setItem('gh_token',this.value)">
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+        github.com → Settings → Developer settings → Personal access tokens → New token (samo <strong>gist</strong> scope)
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Gist ID <span style="opacity:.6">(ostavite prazno za prvi put — sistem će kreirati automatski)</span></label>
+      <input type="text" id="ghGistId" placeholder="abc123def456..."
+        style="width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:monospace;font-size:13px;outline:none;"
+        oninput="localStorage.setItem('gh_gist_id',this.value)">
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-gold" onclick="gistPush()">⬆ Pošalji lager na cloud</button>
+      <button class="btn btn-outline" onclick="gistPull()">⬇ Učitaj lager sa cloud</button>
+    </div>
+    <div id="gistStatus" style="margin-top:10px;font-size:12px;color:var(--text-muted);"></div>
+  </div>
+
   <div id="lagerPreview" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
       <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold)">Učitani lager</div>
@@ -597,7 +627,7 @@ function init(){
       const o=document.createElement("option");o.value=k;o.textContent=k;
       document.getElementById("aKat").appendChild(o);
     });
-    renderKatBar(); renderTabela(); ucitajPopis(); ucitajLagerStorage();
+    renderKatBar(); renderTabela(); ucitajPopis(); ucitajLagerStorage(); initGistUI();
   }catch(e){
     console.error("Init greška:",e);
     // Pokušaj ponovo nakon 300ms (čeka DOM)
@@ -945,9 +975,88 @@ function ucitajLagerStorage(){
     if(ord) primijeniLagerSort(JSON.parse(ord));
   }
 }
+// ─── GIST SYNC ────────────────────────────────────────────
+function gistSetStatus(msg, ok){
+  const el=document.getElementById("gistStatus");
+  if(el){ el.textContent=msg; el.style.color=ok?'var(--success)':ok===false?'#e74c3c':'var(--text-muted)'; }
+}
+
+async function gistPush(){
+  const token=localStorage.getItem("gh_token")||"";
+  if(!token){ gistSetStatus("⚠ Unesite GitHub token.",false); return; }
+  if(!Object.keys(lagerData).length){ gistSetStatus("⚠ Nema lager podataka za slanje.",false); return; }
+
+  const payload={lagerData, lagerOrder:JSON.parse(localStorage.getItem("lagerOrder")||"[]"), lagerMeta};
+  const content=JSON.stringify(payload);
+  const gistId=localStorage.getItem("gh_gist_id")||"";
+  gistSetStatus("⏳ Šaljem...", null);
+
+  try{
+    let url="https://api.github.com/gists";
+    let method="POST";
+    let body={description:"Terme Ozren — Lager Data",public:false,files:{"lager.json":{content}}};
+
+    if(gistId){
+      url=`https://api.github.com/gists/${gistId}`;
+      method="PATCH";
+      body={files:{"lager.json":{content}}};
+    }
+
+    const r=await fetch(url,{method,headers:{"Authorization":"token "+token,"Content-Type":"application/json"},body:JSON.stringify(body)});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const data=await r.json();
+    const id=data.id;
+    localStorage.setItem("gh_gist_id",id);
+    document.getElementById("ghGistId").value=id;
+    gistSetStatus("✓ Lager sačuvan na cloud! Gist ID: "+id, true);
+    showToast("☁️ Lager sinhronizovan!");
+  }catch(e){
+    gistSetStatus("✗ Greška: "+e.message, false);
+  }
+}
+
+async function gistPull(){
+  const token=localStorage.getItem("gh_token")||"";
+  const gistId=localStorage.getItem("gh_gist_id")||"";
+  if(!gistId){ gistSetStatus("⚠ Unesite Gist ID.",false); return; }
+  gistSetStatus("⏳ Učitavam sa cloud...", null);
+
+  try{
+    const headers={"Content-Type":"application/json"};
+    if(token) headers["Authorization"]="token "+token;
+    const r=await fetch(`https://api.github.com/gists/${gistId}`,{headers});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const data=await r.json();
+    const content=data.files["lager.json"]?.content;
+    if(!content) throw new Error("lager.json nije nađen u Gist-u");
+
+    const payload=JSON.parse(content);
+    lagerData=payload.lagerData||{};
+    lagerMeta=payload.lagerMeta||null;
+    const order=payload.lagerOrder||[];
+
+    localStorage.setItem("ld",JSON.stringify(lagerData));
+    localStorage.setItem("lm",JSON.stringify(lagerMeta));
+    localStorage.setItem("lagerOrder",JSON.stringify(order));
+
+    primijeniLagerSort(order);
+    azurirajLagerUI(); renderLagerPreview(); azurirajBadge(); azurirajStat();
+    gistSetStatus("✓ Lager učitan sa cloud! "+Object.keys(lagerData).length+" artikala.", true);
+    showToast("☁️ Lager preuzet sa cloud!");
+  }catch(e){
+    gistSetStatus("✗ Greška: "+e.message, false);
+  }
+}
+
+function initGistUI(){
+  const token=localStorage.getItem("gh_token")||"";
+  const gistId=localStorage.getItem("gh_gist_id")||"";
+  const tEl=document.getElementById("ghToken");
+  const gEl=document.getElementById("ghGistId");
+  if(tEl) tEl.value=token;
+  if(gEl) gEl.value=gistId;
+}
 function primijeniLagerSort(order){
-  // Sortiramo ARTIKLI po redoslijedu iz lager fajla
-  // Artikli kojih nema u lageru idu na kraj (zadržavaju međusobni redoslijed)
   const orderMap={};
   order.forEach((s,i)=>orderMap[s]=i);
   ARTIKLI.sort((a,b)=>{
