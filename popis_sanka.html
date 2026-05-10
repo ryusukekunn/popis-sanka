@@ -783,6 +783,7 @@ function chKolCard(el){
 }
 
 
+function chKol(el){
   const s=el.dataset.sifra; if(!kolicine[s]) kolicine[s]={kol:"",napomena:""};
   kolicine[s].kol=el.value;
   const a=ARTIKLI.find(x=>x.sifra==s);
