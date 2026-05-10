@@ -766,4 +766,339 @@ function chKolCard(el){
   }
 
   // Razlika
-  const hasLager=Object.keys(lagerData).length                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+  const hasLager=Object.keys(lagerData).length>0;
+  const lKol=lagerData[String(s)];
+  if(hasLager&&lKol!==undefined){
+    const p=el.value?parseFloat(el.value):0;
+    const raz=p-Number(lKol);
+    let razHtml='';
+    card.classList.remove("trm","trv");
+    if(Math.abs(raz)<0.001) razHtml='<span style="color:var(--text-muted);font-size:11px">= lager</span>';
+    else if(raz<0){razHtml=`<span class="rm">▼ ${fmt2(raz)}</span>`;card.classList.add("trm");}
+    else{razHtml=`<span class="rv">▲ +${fmt2(raz)}</span>`;card.classList.add("trv");}
+    const razEl=card.querySelector(".card-razlika");
+    if(razEl) razEl.innerHTML=razHtml;
+  }
+  azurirajStat();
+}
+
+
+  const s=el.dataset.sifra; if(!kolicine[s]) kolicine[s]={kol:"",napomena:""};
+  kolicine[s].kol=el.value;
+  const a=ARTIKLI.find(x=>x.sifra==s);
+  const ukEl=document.getElementById("uk_"+s);
+  const razEl=document.getElementById("raz_"+s);
+  const v=parseFloat(el.value);
+  const hasVal=el.value&&v>=0&&el.value!=="";
+  const pozitivan=el.value&&v>0;
+
+  if(pozitivan){
+    ukEl.textContent=fmt(v*a.cijena)+" KM"; ukEl.classList.remove("empty");
+    el.classList.add("filled"); el.closest("tr").classList.add("has-value");
+  } else {
+    ukEl.textContent="—"; ukEl.classList.add("empty");
+    el.classList.remove("filled"); el.closest("tr").classList.remove("has-value");
+    kolicine[s].kol="";
+  }
+
+  // live razlika
+  if(razEl){
+    const lKol=lagerData[String(s)];
+    const tr=el.closest("tr");
+    tr.classList.remove("trm","trv");
+    if(lKol!==undefined&&hasVal){
+      const raz=(el.value?parseFloat(el.value):0)-Number(lKol);
+      if(Math.abs(raz)<0.001){razEl.innerHTML='<span style="color:var(--text-muted)">= 0</span>';}
+      else if(raz<0){razEl.innerHTML=`<span class="rm">▼ ${fmt2(raz)}</span>`;tr.classList.add("trm");}
+      else{razEl.innerHTML=`<span class="rv">▲ +${fmt2(raz)}</span>`;tr.classList.add("trv");}
+    } else if(lKol!==undefined){
+      razEl.innerHTML='<span class="lnone">—</span>';
+    }
+  }
+  azurirajStat();
+}
+function chNap(el){
+  const s=el.dataset.sifra; if(!kolicine[s]) kolicine[s]={kol:"",napomena:""}; kolicine[s].napomena=el.value;
+}
+
+function azurirajStat(){
+  let uk=0,br=0;
+  ARTIKLI.forEach(a=>{const s=kolicine[a.sifra];if(s&&s.kol&&parseFloat(s.kol)>0){br++;uk+=parseFloat(s.kol)*a.cijena;}});
+  document.getElementById("sBroj").textContent=br+" / "+ARTIKLI.length;
+  document.getElementById("sUk").textContent=fmt(uk)+" KM";
+  if(Object.keys(lagerData).length>0){
+    const {vrM}=kalkuliraj();
+    document.getElementById("sManjakWrap").style.display="flex";
+    document.getElementById("sManjak").textContent=fmt(vrM)+" KM";
+  }
+}
+
+function sacuvajPopis(){
+  localStorage.setItem("p_"+datum,JSON.stringify({datum,kolicine,t:new Date().toISOString()}));
+  let l=JSON.parse(localStorage.getItem("p_lista")||"[]");
+  if(!l.includes(datum)) l.push(datum);
+  localStorage.setItem("p_lista",JSON.stringify(l));
+  showToast("✓ Popis sačuvan — "+datum);
+}
+function ucitajPopis(){
+  const d=localStorage.getItem("p_"+datum);
+  if(d){kolicine=JSON.parse(d).kolicine||{};renderTabela();showToast("📂 Učitan popis: "+datum);}
+  else{kolicine={};renderTabela();}
+}
+function ucitajPrethodni(){
+  const l=JSON.parse(localStorage.getItem("p_lista")||"[]");
+  if(!l.length){showToast("Nema sačuvanih popisa.");return;}
+  const izbor=l.sort().reverse().find(x=>x!==datum)||l[0];
+  const d=JSON.parse(localStorage.getItem("p_"+izbor)||"null");
+  if(!d){showToast("Nema popisa.");return;}
+  kolicine=d.kolicine||{};renderTabela();showToast("📂 Učitan popis od "+izbor);
+}
+function obrisiPopis(){if(!confirm("Obrisati sve količine?"))return;kolicine={};renderTabela();showToast("Popis obrisan.");}
+
+// ─── LAGER ────────────────────────────────────────────────
+function uvozLager(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+      // traži red s ART headerom
+      let start=3;
+      for(let i=0;i<rows.length;i++){if(rows[i][22]==="ART"){start=i+1;break;}}
+      lagerData={};let n=0;
+      const lagerOrder=[];
+      for(let i=start;i<rows.length;i++){
+        const r=rows[i]; const s=r[22]; const k=r[33];
+        if(s&&!isNaN(Number(s))&&k!==null&&k!==undefined&&!isNaN(Number(k))){
+          lagerData[String(s)]=Number(k);
+          lagerOrder.push(String(s));
+          n++;
+        }
+      }
+      // Sačuvaj redoslijed
+      localStorage.setItem("lagerOrder",JSON.stringify(lagerOrder));
+      lagerMeta={naziv:file.name,n,dat:new Date().toLocaleDateString("bs-BA")};
+      localStorage.setItem("ld",JSON.stringify(lagerData));
+      localStorage.setItem("lm",JSON.stringify(lagerMeta));
+      primijeniLagerSort(lagerOrder);
+      azurirajLagerUI(); renderLagerPreview(); azurirajBadge(); azurirajStat();
+      showToast("✓ Lager učitan: "+n+" artikala");
+    }catch(err){showToast("Greška: "+err.message);}
+  };
+  reader.readAsArrayBuffer(file); input.value="";
+}
+function ucitajLagerStorage(){
+  const d=localStorage.getItem("ld"),m=localStorage.getItem("lm");
+  if(d&&m){
+    lagerData=JSON.parse(d);lagerMeta=JSON.parse(m);
+    azurirajLagerUI();renderLagerPreview();azurirajBadge();
+    // učitaj redoslijed i primijeni sort
+    const ord=localStorage.getItem("lagerOrder");
+    if(ord) primijeniLagerSort(JSON.parse(ord));
+  }
+}
+function primijeniLagerSort(order){
+  // Sortiramo ARTIKLI po redoslijedu iz lager fajla
+  // Artikli kojih nema u lageru idu na kraj (zadržavaju međusobni redoslijed)
+  const orderMap={};
+  order.forEach((s,i)=>orderMap[s]=i);
+  ARTIKLI.sort((a,b)=>{
+    const ia=orderMap[String(a.sifra)]??10000;
+    const ib=orderMap[String(b.sifra)]??10000;
+    return ia-ib;
+  });
+  renderKatBar();
+  renderTabela();
+}
+
+function obrisiLager(){
+  if(!confirm("Ukloniti lager?"))return;
+  lagerData={};lagerMeta=null;
+  localStorage.removeItem("ld");localStorage.removeItem("lm");
+  azurirajLagerUI();renderLagerPreview();azurirajBadge();
+  document.getElementById("sManjakWrap").style.display="none";
+  showToast("Lager uklonjen.");
+}
+function azurirajLagerUI(){
+  const dot=document.getElementById("lDot"),info=document.getElementById("lInfo");
+  if(lagerMeta){dot.className="dot dot-on";info.innerHTML=`<strong style="color:var(--gold)">${lagerMeta.naziv}</strong> — ${lagerMeta.n} artikala<small>Uvezeno: ${lagerMeta.dat}</small>`;}
+  else{dot.className="dot dot-off";info.textContent="Lager nije učitan.";}
+}
+function renderLagerPreview(){
+  const wrap=document.getElementById("lagerPreview");
+  if(!lagerMeta){wrap.style.display="none";return;}
+  wrap.style.display="block";
+  const tbody=document.getElementById("lTbody"); tbody.innerHTML="";
+  Object.entries(lagerData).forEach(([s,k])=>{
+    const a=ARTIKLI.find(x=>x.sifra==s);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td class="sifra">${s}</td><td>${a?a.naziv:'<span class="lnone">Nije u šanku</span>'}</td><td class="jm">${a?a.jm:''}</td><td class="num-r" style="color:var(--gold);font-weight:500">${fmt2(k)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+function azurirajBadge(){
+  const badge=document.getElementById("aBadge");
+  if(Object.keys(lagerData).length>0){
+    const {brM}=kalkuliraj(); badge.style.display=brM>0?"inline-block":"none"; badge.textContent=brM+" ⚠";
+  } else badge.style.display="none";
+}
+
+// ─── ANALIZA ────────────────────────────────────────────────
+function kalkuliraj(){
+  let brM=0,brV=0,brOk=0,vrM=0,vrV=0;
+  ARTIKLI.forEach(a=>{
+    const l=lagerData[String(a.sifra)];
+    const p=kolicine[a.sifra]?.kol?parseFloat(kolicine[a.sifra].kol):null;
+    if(l===undefined||p===null) return;
+    const r=p-Number(l);
+    if(Math.abs(r)<0.001) brOk++;
+    else if(r<0){brM++;vrM+=Math.abs(r)*a.cijena;}
+    else{brV++;vrV+=r*a.cijena;}
+  });
+  return {brM,brV,brOk,vrM,vrV};
+}
+
+function renderAnaliza(){
+  const hasL=Object.keys(lagerData).length>0;
+  const hasP=Object.keys(kolicine).some(s=>kolicine[s].kol&&parseFloat(kolicine[s].kol)>0);
+  if(!hasL||!hasP){document.getElementById("noData").style.display="block";document.getElementById("analizaContent").style.display="none";return;}
+  document.getElementById("noData").style.display="none";document.getElementById("analizaContent").style.display="block";
+
+  const {brM,brV,brOk,vrM,vrV}=kalkuliraj();
+  const brN=ARTIKLI.filter(a=>{const l=lagerData[String(a.sifra)];return l!==undefined&&Number(l)>0&&(!kolicine[a.sifra]?.kol||parseFloat(kolicine[a.sifra].kol)===0);}).length;
+
+  document.getElementById("aSub").textContent="Popis: "+datum+(lagerMeta?" · Lager: "+lagerMeta.naziv:"");
+  document.getElementById("sGrid").innerHTML=`
+    <div class="sc d"><div class="sc-label">Manjak</div><div class="sc-val">${brM}</div><div class="sc-sub">Vrijednost: <strong>${fmt(vrM)} KM</strong></div></div>
+    <div class="sc s"><div class="sc-label">Višak</div><div class="sc-val">${brV}</div><div class="sc-sub">+${fmt(vrV)} KM</div></div>
+    <div class="sc"><div class="sc-label">Podudaranje</div><div class="sc-val">${brOk}</div><div class="sc-sub">Popis = lager</div></div>
+    <div class="sc"><div class="sc-label">Nepopisano</div><div class="sc-val">${brN}</div><div class="sc-sub">U lageru, bez popisa</div></div>`;
+
+  const q=document.getElementById("aQ").value.toLowerCase();
+  const kf=document.getElementById("aKat").value;
+  let lista=ARTIKLI.filter(a=>{
+    if(kf&&a.kat!==kf) return false;
+    if(q&&!a.naziv.toLowerCase().includes(q)&&!String(a.sifra).includes(q)) return false;
+    const l=lagerData[String(a.sifra)];
+    const p=kolicine[a.sifra]?.kol?parseFloat(kolicine[a.sifra].kol):null;
+    if(aFilter==="manjak") return l!==undefined&&p!==null&&(p-Number(l))<-0.001;
+    if(aFilter==="visenak") return l!==undefined&&p!==null&&(p-Number(l))>0.001;
+    if(aFilter==="ok") return l!==undefined&&p!==null&&Math.abs(p-Number(l))<0.001;
+    if(aFilter==="nema") return l!==undefined&&Number(l)>0&&(p===null||p===0);
+    return l!==undefined||p!==null;
+  });
+
+  // sort: najveći manjak gore
+  lista.sort((a,b)=>{
+    const la=lagerData[String(a.sifra)]!==undefined?Number(lagerData[String(a.sifra)]):null;
+    const pa=kolicine[a.sifra]?.kol?parseFloat(kolicine[a.sifra].kol):null;
+    const lb=lagerData[String(b.sifra)]!==undefined?Number(lagerData[String(b.sifra)]):null;
+    const pb=kolicine[b.sifra]?.kol?parseFloat(kolicine[b.sifra].kol):null;
+    const ra=(pa!==null&&la!==null)?pa-la:0;
+    const rb=(pb!==null&&lb!==null)?pb-lb:0;
+    return ra-rb;
+  });
+
+  const tbody=document.getElementById("aTbody");
+  if(!lista.length){tbody.innerHTML='<tr><td colspan="8" class="empty-msg">Nema rezultata.</td></tr>';return;}
+  tbody.innerHTML="";
+  lista.forEach((a,i)=>{
+    const l=lagerData[String(a.sifra)]!==undefined?Number(lagerData[String(a.sifra)]):null;
+    const p=kolicine[a.sifra]?.kol?parseFloat(kolicine[a.sifra].kol):null;
+    const r=(l!==null&&p!==null)?p-l:null;
+    const vrR=r!==null?r*a.cijena:null;
+    let rKl="ro",trKl=""; let rTxt="=";
+    if(r!==null){
+      if(r<-0.001){rKl="rm";trKl="trm";rTxt=fmt2(r);}
+      else if(r>0.001){rKl="rv";trKl="trv";rTxt="+"+fmt2(r);}
+    }
+    const nepopisan = p===null;
+    const tr=document.createElement("tr");
+    tr.className=[trKl, nepopisan?'row-nepopisan':''].filter(Boolean).join(' ');
+    tr.innerHTML=`<td class="col-br">${i+1}</td><td class="sifra">${a.sifra}</td><td>${a.naziv}</td><td class="jm">${a.jm}</td>
+      <td class="num-r">${l!==null?fmt2(l)+' <span style="color:var(--text-muted);font-size:11px">'+a.jm+'</span>':'<span class="lnone">—</span>'}</td>
+      <td class="num-r">${p!==null?fmt2(p)+' <span style="color:var(--text-muted);font-size:11px">'+a.jm+'</span>':'<span class="lnone">nepopisan</span>'}</td>
+      <td class="num-r ${rKl}">${r!==null?rTxt:'—'}</td>
+      <td class="num-r ${rKl}" style="font-size:12px">${vrR!==null?(vrR>=0?'+':'')+fmt(vrR)+' KM':'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function setF(f,btn){
+  aFilter=f;
+  document.querySelectorAll(".fb").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  renderAnaliza();
+}
+
+function stampaj(){
+  const stari=document.title;
+  document.title="Popis šanka 101 — "+datum;
+  window.print();
+  document.title=stari;
+}
+
+// ─── MODAL / CSV ──────────────────────────────────────────
+function otvoriPregled(){
+  const u=ARTIKLI.filter(a=>kolicine[a.sifra]?.kol&&parseFloat(kolicine[a.sifra].kol)>0);
+  if(!u.length){showToast("Nema unesenih artikala.");return;}
+  let uk=0,html="";
+  u.forEach(a=>{const k=parseFloat(kolicine[a.sifra].kol);const uu=k*a.cijena;uk+=uu;html+=`<tr><td>${a.naziv}</td><td>${fmt2(k)} ${a.jm}</td><td>${fmt(uu)} KM</td></tr>`;});
+  document.getElementById("mTbody").innerHTML=html;
+  document.getElementById("mUk").textContent=fmt(uk)+" KM";
+  document.getElementById("mSub").textContent="Datum: "+datum+" · "+u.length+" artikala";
+  document.getElementById("mOverlay").classList.add("open");
+}
+function zatvoriModal(){document.getElementById("mOverlay").classList.remove("open");}
+document.getElementById("mOverlay").addEventListener("click",function(e){if(e.target===this)zatvoriModal();});
+
+function izvozCSV(){
+  const u=ARTIKLI.filter(a=>kolicine[a.sifra]?.kol&&parseFloat(kolicine[a.sifra].kol)>0);
+  let csv="Datum;Sifra;Naziv;JM;Cijena;Kolicina;Ukupno;Napomena\n";
+  u.forEach(a=>{const k=parseFloat(kolicine[a.sifra].kol);csv+=`${datum};${a.sifra};${a.naziv};${a.jm};${a.cijena.toFixed(2)};${k};${(k*a.cijena).toFixed(2)};${(kolicine[a.sifra].napomena||"").replace(/;/g,",")}\n`;});
+  dlCSV(csv,"popis_sanka_"+datum+".csv");
+}
+function izvozAnalizaCSV(){
+  let csv="Sifra;Naziv;Kategorija;JM;Cijena;Lager;Popis;Razlika_kol;Razlika_KM\n";
+  ARTIKLI.forEach(a=>{
+    const l=lagerData[String(a.sifra)]!==undefined?Number(lagerData[String(a.sifra)]):null;
+    const p=kolicine[a.sifra]?.kol?parseFloat(kolicine[a.sifra].kol):null;
+    if(l===null&&p===null) return;
+    const r=(l!==null&&p!==null)?p-l:null;
+    csv+=`${a.sifra};${a.naziv};${a.kat};${a.jm};${a.cijena.toFixed(2)};${l!==null?l:''};${p!==null?p:''};${r!==null?r.toFixed(3):''};${r!==null?(r*a.cijena).toFixed(2):''}\n`;
+  });
+  dlCSV(csv,"analiza_lager_"+datum+".csv"); showToast("⬇ CSV exportovan.");
+}
+function dlCSV(csv,name){
+  const b=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+  const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);
+}
+
+function fmt(n){return parseFloat(n).toLocaleString("bs-BA",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmt2(n){return parseFloat(n).toLocaleString("bs-BA",{minimumFractionDigits:0,maximumFractionDigits:3});}
+function showToast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2800);}
+
+document.addEventListener("keydown",function(e){
+  if(e.key==="Enter"&&e.target.classList.contains("qty-input")){
+    e.preventDefault();const inp=[...document.querySelectorAll(".qty-input")];const i=inp.indexOf(e.target);
+    if(i>=0&&i<inp.length-1)inp[i+1].focus();
+  }
+});
+
+init();
+
+// Deregistriraj sve stare service workere i očisti cache
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(reg => reg.unregister());
+  });
+}
+if ('caches' in window) {
+  caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+}
+
+</script>
+</body>
+</html>
