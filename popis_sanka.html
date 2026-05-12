@@ -217,8 +217,10 @@
     .kat-tab{white-space:nowrap;flex-shrink:0;}
 
     /* ═══ SAKRIJ TABELU, PRIKAŽI KARTICE ═══ */
-    .table-wrap{display:none;}
+    #pagePopis .table-wrap{display:none;}
+    #analizaTableWrap{display:none;}
     .card-list{display:flex;}
+    #analizaCardList{display:flex;}
 
     /* CARD LIST */
     .card-list{display:flex;flex-direction:column;gap:2px;}
@@ -296,9 +298,14 @@
     /* Stats grid 2 kolone */
     .stats-grid{grid-template-columns:repeat(2,1fr);}
 
-    /* Analiza tabela - sakrij neke kolone */
-    #pageAnaliza td:nth-child(1),#pageAnaliza th:nth-child(1){display:none;}
-    #pageAnaliza td.sifra,#pageAnaliza th:nth-child(2){display:none;}
+    /* Analiza tabela - scroll horizontalno, sakrij manje važne kolone */
+    #pageAnaliza .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    #pageAnaliza table{min-width:480px;font-size:12px;}
+    #pageAnaliza td,#pageAnaliza th{padding:6px 8px;}
+    /* Sakrij šifru i broj na mobitelu */
+    #pageAnaliza td:nth-child(1),#pageAnaliza th:nth-child(1),
+    #pageAnaliza td:nth-child(2),#pageAnaliza th:nth-child(2){display:none;}
+    /* Sakrij KM razliku - ostavi samo kol razliku */
     #pageAnaliza td:nth-child(8),#pageAnaliza th:nth-child(8){display:none;}
   }
 </style>
@@ -448,7 +455,7 @@
       <div class="search-box"><span class="icon">🔍</span><input type="text" id="aQ" placeholder="Pretraži..." oninput="renderAnaliza()"></div>
       <select class="fs" id="aKat" onchange="renderAnaliza()"><option value="">Sve kategorije</option></select>
     </div>
-    <div class="table-wrap">
+    <div class="table-wrap" id="analizaTableWrap">
       <table><thead><tr>
         <th class="col-br">#</th><th>Šifra</th><th>Naziv</th><th style="text-align:center">JM</th>
         <th style="text-align:right">Lager (knjižno)</th>
@@ -458,6 +465,8 @@
       </tr></thead>
       <tbody id="aTbody"></tbody></table>
     </div>
+    <!-- Mobile card list za analizu -->
+    <div class="card-list" id="analizaCardList"></div>
   </div>
 </div>
 
@@ -1142,7 +1151,9 @@ function renderAnaliza(){
     if(aFilter==="visenak") return l!==undefined&&p!==null&&(p-Number(l))>0.001;
     if(aFilter==="ok") return l!==undefined&&p!==null&&Math.abs(p-Number(l))<0.001;
     if(aFilter==="nema") return l!==undefined&&Number(l)>0&&(p===null||p===0);
-    return l!==undefined||p!==null;
+    // U "sve" modu prikaži samo one koji imaju i lager i popis (ili manjak/višak)
+    // Nepopisani se vide samo kad se klikne "Nepopisano" filter
+    return l!==undefined && p!==null;
   });
 
   // sort: najveći manjak gore
@@ -1157,7 +1168,11 @@ function renderAnaliza(){
   });
 
   const tbody=document.getElementById("aTbody");
-  if(!lista.length){tbody.innerHTML='<tr><td colspan="8" class="empty-msg">Nema rezultata.</td></tr>';return;}
+  if(!lista.length){
+    tbody.innerHTML='<tr><td colspan="8" class="empty-msg">Nema rezultata.</td></tr>';
+    renderAnalizaCards([]);
+    return;
+  }
   tbody.innerHTML="";
   lista.forEach((a,i)=>{
     const l=lagerData[String(a.sifra)]!==undefined?Number(lagerData[String(a.sifra)]):null;
@@ -1178,6 +1193,45 @@ function renderAnaliza(){
       <td class="num-r ${rKl}">${r!==null?rTxt:'—'}</td>
       <td class="num-r ${rKl}" style="font-size:12px">${vrR!==null?(vrR>=0?'+':'')+fmt(vrR)+' KM':'—'}</td>`;
     tbody.appendChild(tr);
+  });
+  renderAnalizaCards(lista);
+}
+
+function renderAnalizaCards(lista){
+  const cl=document.getElementById("analizaCardList");
+  if(!cl) return;
+  if(!lista.length){
+    cl.innerHTML='<div style="text-align:center;padding:30px;color:var(--text-muted)">Nema rezultata.</div>';
+    return;
+  }
+  cl.innerHTML="";
+  lista.forEach(a=>{
+    const l=lagerData[String(a.sifra)]!==undefined?Number(lagerData[String(a.sifra)]):null;
+    const p=kolicine[a.sifra]?.kol?parseFloat(kolicine[a.sifra].kol):null;
+    const r=(l!==null&&p!==null)?p-l:null;
+    const vrR=r!==null?r*a.cijena:null;
+    let rKl="", razTxt="", vrTxt="", cardCls="art-card";
+    if(r!==null){
+      if(r<-0.001){rKl="rm"; razTxt=`▼ ${fmt2(r)} ${a.jm}`; vrTxt=fmt(vrR)+" KM"; cardCls+=" trm";}
+      else if(r>0.001){rKl="rv"; razTxt=`▲ +${fmt2(r)} ${a.jm}`; vrTxt="+"+fmt(vrR)+" KM"; cardCls+=" trv";}
+      else{rKl="ro"; razTxt="= podudaranje";}
+    }
+    const card=document.createElement("div");
+    card.className=cardCls;
+    card.innerHTML=`
+      <div class="card-info">
+        <div class="card-naziv">${a.naziv}</div>
+        <div class="card-meta">
+          <span class="card-jm">${a.jm}</span>
+          <span style="color:var(--text-muted);font-size:11px">${fmt(a.cijena)} KM</span>
+        </div>
+        <div class="card-lager-row" style="margin-top:6px;display:flex;gap:12px;">
+          <span style="font-size:12px;color:var(--text-muted)">Lager: <strong style="color:var(--text)">${l!==null?fmt2(l):'-'}</strong></span>
+          <span style="font-size:12px;color:var(--text-muted)">Popis: <strong style="color:var(--text)">${p!==null?fmt2(p):'—'}</strong></span>
+        </div>
+        ${r!==null?`<div style="margin-top:4px;font-size:13px;font-weight:700" class="${rKl}">${razTxt}${vrTxt?' · '+vrTxt:''}</div>`:''}
+      </div>`;
+    cl.appendChild(card);
   });
 }
 
