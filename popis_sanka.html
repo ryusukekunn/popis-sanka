@@ -1240,8 +1240,11 @@ async function posaljiMail(){
   const inclAnaliza=document.getElementById("mailInclAnaliza").checked;
   const napomena=document.getElementById("mailNapomena").value;
 
+  const uneseni=ARTIKLI.filter(a=>kolicine[a.sifra]?.kol&&parseFloat(kolicine[a.sifra].kol)>0);
+  let uk=0; uneseni.forEach(a=>uk+=parseFloat(kolicine[a.sifra].kol)*a.cijena);
+  const {brM,brV,vrM,vrV}=Object.keys(lagerData).length?kalkuliraj():{brM:0,brV:0,vrM:0,vrV:0};
+
   let htmlContent=`<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;background:#ffffff">
-    <!-- Header -->
     <div style="background:#1a1410;padding:24px 28px;border-bottom:3px solid #c9a84c">
       <table style="width:100%"><tr>
         <td>
@@ -1253,27 +1256,20 @@ async function posaljiMail(){
         </td>
       </tr></table>
     </div>
-    <!-- Info bar -->
-    <div style="background:#fdfaf5;border-bottom:1px solid #e8e0d0;padding:12px 28px;display:flex;gap:24px">
-      <span style="font-size:12px;color:#888">📦 Artikala uneseno: <strong style="color:#1a1a1a">${uneseni.length}</strong></span>
-      <span style="font-size:12px;color:#888">💰 Ukupno: <strong style="color:#a07830">${fmt(uk)} KM</strong></span>
+    <div style="background:#fdfaf5;border-bottom:1px solid #e8e0d0;padding:12px 28px">
+      <span style="font-size:12px;color:#888;margin-right:20px">📦 Artikala: <strong style="color:#1a1a1a">${uneseni.length}</strong></span>
+      <span style="font-size:12px;color:#888;margin-right:20px">💰 Ukupno: <strong style="color:#a07830">${fmt(uk)} KM</strong></span>
       ${brM>0?`<span style="font-size:12px;color:#888">⚠ Manjak: <strong style="color:#c0392b">${fmt(vrM)} KM</strong></span>`:''}
     </div>
-    <!-- Body -->
     <div style="padding:24px 28px">
       ${napomena?`<div style="background:#fffbe6;border-left:4px solid #c9a84c;border-radius:0 6px 6px 0;padding:10px 14px;margin-bottom:20px;font-size:13px;color:#5a4a1a"><strong>Napomena:</strong> ${napomena}</div>`:''}
       ${inclPopis?generirajPopisHTML():''}
       ${inclAnaliza?generirajAnalizaHTML():''}
     </div>
-    <!-- Footer -->
     <div style="background:#1a1410;padding:14px 28px;text-align:center">
       <div style="font-size:11px;color:#666">Automatski generisano • Hotel Terme Ozren • Popis Šanka aplikacija</div>
     </div>
   </div>`;
-
-  const uneseni=ARTIKLI.filter(a=>kolicine[a.sifra]?.kol&&parseFloat(kolicine[a.sifra].kol)>0);
-  let uk=0; uneseni.forEach(a=>uk+=parseFloat(kolicine[a.sifra].kol)*a.cijena);
-  const {brM,vrM}=Object.keys(lagerData).length?kalkuliraj():{brM:0,vrM:0};
 
   const templateParams={
     datum,
@@ -1283,16 +1279,13 @@ async function posaljiMail(){
     manjak: brM>0?brM+" artikala · "+fmt(vrM)+" KM":"Nema manjka",
     napomena: napomena||"—",
     html_content: htmlContent,
-    to_email1: "menadzer@termeozren.com",
-    to_email2: "zoran.j@gilje-gas.com",
+    to_email: "nabavka@termeozren.com",
   };
 
   try{
     emailjs.init(key);
-    // Pošalji na oba primaoca
-    await emailjs.send(sid, tid, {...templateParams, to_email: "menadzer@termeozren.com"});
-    await emailjs.send(sid, tid, {...templateParams, to_email: "zoran.j@gilje-gas.com"});
-    document.getElementById("mailStatusMsg").innerHTML='<span style="color:#27ae60">✓ Izvještaj uspješno poslan na oba primaoca!</span>';
+    await emailjs.send(sid, tid, templateParams);
+    document.getElementById("mailStatusMsg").innerHTML='<span style="color:#27ae60">✓ Izvještaj uspješno poslan!</span>';
     showToast("📧 Izvještaj poslan!");
     setTimeout(()=>zatvoriMailModal(), 2000);
   }catch(err){
