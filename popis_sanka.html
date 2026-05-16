@@ -1084,29 +1084,40 @@ function generirajPopisHTML(){
   let redovi=uneseni.map((a,i)=>{
     const kol=parseFloat(kolicine[a.sifra].kol);
     const u=kol*a.cijena; uk+=u;
-    return `<tr style="border-bottom:1px solid #eee">
-      <td style="padding:5px 8px">${i+1}</td>
-      <td style="padding:5px 8px">${a.naziv}</td>
-      <td style="padding:5px 8px;text-align:center">${a.jm}</td>
-      <td style="padding:5px 8px;text-align:right">${fmt2(kol)}</td>
-      <td style="padding:5px 8px;text-align:right">${fmt(u)} KM</td>
+    const bg=i%2===0?'#fdfaf5':'#ffffff';
+    return `<tr style="background:${bg}">
+      <td style="padding:8px 12px;color:#888;font-size:12px">${i+1}</td>
+      <td style="padding:8px 12px;font-size:13px;color:#1a1a1a">${a.naziv}</td>
+      <td style="padding:8px 12px;text-align:center;font-size:12px;color:#666">${a.jm}</td>
+      <td style="padding:8px 12px;text-align:right;font-size:13px;font-weight:600;color:#1a1a1a">${fmt2(kol)}</td>
+      <td style="padding:8px 12px;text-align:right;font-size:13px;color:#a07830;font-weight:600">${fmt(u)} KM</td>
     </tr>`;
   }).join("");
-  return `<h3 style="color:#a07830;font-family:serif">Popis šanka — ${datum}</h3>
-  <table style="border-collapse:collapse;width:100%;font-size:13px">
-    <thead><tr style="background:#f5f0e8">
-      <th style="padding:6px 8px;text-align:left">#</th>
-      <th style="padding:6px 8px;text-align:left">Naziv</th>
-      <th style="padding:6px 8px">JM</th>
-      <th style="padding:6px 8px;text-align:right">Količina</th>
-      <th style="padding:6px 8px;text-align:right">Ukupno</th>
-    </tr></thead>
-    <tbody>${redovi}</tbody>
-    <tfoot><tr style="background:#f5f0e8;font-weight:bold">
-      <td colspan="4" style="padding:6px 8px">UKUPNO</td>
-      <td style="padding:6px 8px;text-align:right">${fmt(uk)} KM</td>
-    </tr></tfoot>
-  </table>`;
+  return `
+  <div style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="width:4px;height:24px;background:#c9a84c;border-radius:2px"></div>
+      <h3 style="margin:0;font-size:16px;color:#1a1a1a;font-family:Georgia,serif">Popis šanka — ${datum}</h3>
+    </div>
+    <table style="border-collapse:collapse;width:100%;border-radius:8px;overflow:hidden;border:1px solid #e8e0d0">
+      <thead>
+        <tr style="background:#2d2416">
+          <th style="padding:10px 12px;text-align:left;color:#c9a84c;font-size:11px;letter-spacing:.06em;font-weight:600">#</th>
+          <th style="padding:10px 12px;text-align:left;color:#c9a84c;font-size:11px;letter-spacing:.06em;font-weight:600">NAZIV</th>
+          <th style="padding:10px 12px;color:#c9a84c;font-size:11px;letter-spacing:.06em;font-weight:600">JM</th>
+          <th style="padding:10px 12px;text-align:right;color:#c9a84c;font-size:11px;letter-spacing:.06em;font-weight:600">KOLIČINA</th>
+          <th style="padding:10px 12px;text-align:right;color:#c9a84c;font-size:11px;letter-spacing:.06em;font-weight:600">UKUPNO</th>
+        </tr>
+      </thead>
+      <tbody>${redovi}</tbody>
+      <tfoot>
+        <tr style="background:#2d2416">
+          <td colspan="4" style="padding:10px 12px;color:#c9a84c;font-size:13px;font-weight:700">UKUPNO POPIS</td>
+          <td style="padding:10px 12px;text-align:right;color:#c9a84c;font-size:15px;font-weight:700">${fmt(uk)} KM</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>`;
 }
 
 function generirajAnalizaHTML(){
@@ -1123,46 +1134,92 @@ function generirajAnalizaHTML(){
     return l!==undefined&&p!==null&&(p-Number(l))>0.001;
   });
 
-  const manjciRedovi=manjci.map(a=>{
-    const l=Number(lagerData[String(a.sifra)]);
-    const p=parseFloat(kolicine[a.sifra].kol);
-    const r=p-l;
-    return `<tr style="border-bottom:1px solid #fee;background:#fff8f8">
-      <td style="padding:5px 8px">${a.naziv}</td>
-      <td style="padding:5px 8px;text-align:right">${fmt2(l)} ${a.jm}</td>
-      <td style="padding:5px 8px;text-align:right">${fmt2(p)} ${a.jm}</td>
-      <td style="padding:5px 8px;text-align:right;color:#c0392b;font-weight:bold">${fmt2(r)} ${a.jm}</td>
-      <td style="padding:5px 8px;text-align:right;color:#c0392b;font-weight:bold">${fmt(r*a.cijena)} KM</td>
-    </tr>`;
-  }).join("");
-
-  const visakRedovi=visak.map(a=>{
-    const l=Number(lagerData[String(a.sifra)]);
-    const p=parseFloat(kolicine[a.sifra].kol);
-    const r=p-l;
-    return `<tr style="border-bottom:1px solid #efe;background:#f8fff8">
-      <td style="padding:5px 8px">${a.naziv}</td>
-      <td style="padding:5px 8px;text-align:right">${fmt2(l)} ${a.jm}</td>
-      <td style="padding:5px 8px;text-align:right">${fmt2(p)} ${a.jm}</td>
-      <td style="padding:5px 8px;text-align:right;color:#27ae60;font-weight:bold">+${fmt2(r)} ${a.jm}</td>
-      <td style="padding:5px 8px;text-align:right;color:#27ae60;font-weight:bold">+${fmt(r*a.cijena)} KM</td>
-    </tr>`;
-  }).join("");
-
-  const thead=`<thead><tr style="background:#f5f0e8">
-    <th style="padding:6px 8px;text-align:left">Naziv</th>
-    <th style="padding:6px 8px;text-align:right">Lager</th>
-    <th style="padding:6px 8px;text-align:right">Popis</th>
-    <th style="padding:6px 8px;text-align:right">Razlika</th>
-    <th style="padding:6px 8px;text-align:right">Vr. razlike</th>
+  const thead=`<thead><tr style="background:#2d2416">
+    <th style="padding:10px 12px;text-align:left;color:#c9a84c;font-size:11px;letter-spacing:.06em;font-weight:600">NAZIV</th>
+    <th style="padding:10px 12px;text-align:right;color:#c9a84c;font-size:11px;letter-spacing:.06em;font-weight:600">LAGER</th>
+    <th style="padding:10px 12px;text-align:right;color:#c9a84c;font-size:11px;letter-spacing:.06em;font-weight:600">POPIS</th>
+    <th style="padding:10px 12px;text-align:right;color:#c9a84c;font-size:11px;letter-spacing:.06em;font-weight:600">RAZLIKA</th>
+    <th style="padding:10px 12px;text-align:right;color:#c9a84c;font-size:11px;letter-spacing:.06em;font-weight:600">VR. RAZLIKE</th>
   </tr></thead>`;
 
-  return `<br><h3 style="color:#a07830;font-family:serif">Analiza manjka / viška — ${datum}</h3>
-  <p style="font-size:13px">Manjak: <strong style="color:#c0392b">${brM} artikala · ${fmt(vrM)} KM</strong> &nbsp;|&nbsp; Višak: <strong style="color:#27ae60">${brV} artikala · +${fmt(vrV)} KM</strong></p>
-  ${manjciRedovi?`<h4 style="color:#c0392b;margin:12px 0 6px">🔴 Manjak</h4>
-  <table style="border-collapse:collapse;width:100%;font-size:13px">${thead}<tbody>${manjciRedovi}</tbody></table>`:''}
-  ${visakRedovi?`<h4 style="color:#27ae60;margin:12px 0 6px">🟢 Višak</h4>
-  <table style="border-collapse:collapse;width:100%;font-size:13px">${thead}<tbody>${visakRedovi}</tbody></table>`:''}`;
+  const manjciRedovi=manjci.map((a,i)=>{
+    const l=Number(lagerData[String(a.sifra)]);
+    const p=parseFloat(kolicine[a.sifra].kol);
+    const r=p-l;
+    const bg=i%2===0?'#fff8f8':'#ffffff';
+    return `<tr style="background:${bg}">
+      <td style="padding:8px 12px;font-size:13px;color:#1a1a1a">${a.naziv}</td>
+      <td style="padding:8px 12px;text-align:right;font-size:13px;color:#666">${fmt2(l)} ${a.jm}</td>
+      <td style="padding:8px 12px;text-align:right;font-size:13px;color:#666">${fmt2(p)} ${a.jm}</td>
+      <td style="padding:8px 12px;text-align:right;font-size:13px;font-weight:700;color:#c0392b">${fmt2(r)} ${a.jm}</td>
+      <td style="padding:8px 12px;text-align:right;font-size:13px;font-weight:700;color:#c0392b">${fmt(r*a.cijena)} KM</td>
+    </tr>`;
+  }).join("");
+
+  const visakRedovi=visak.map((a,i)=>{
+    const l=Number(lagerData[String(a.sifra)]);
+    const p=parseFloat(kolicine[a.sifra].kol);
+    const r=p-l;
+    const bg=i%2===0?'#f8fff8':'#ffffff';
+    return `<tr style="background:${bg}">
+      <td style="padding:8px 12px;font-size:13px;color:#1a1a1a">${a.naziv}</td>
+      <td style="padding:8px 12px;text-align:right;font-size:13px;color:#666">${fmt2(l)} ${a.jm}</td>
+      <td style="padding:8px 12px;text-align:right;font-size:13px;color:#666">${fmt2(p)} ${a.jm}</td>
+      <td style="padding:8px 12px;text-align:right;font-size:13px;font-weight:700;color:#27ae60">+${fmt2(r)} ${a.jm}</td>
+      <td style="padding:8px 12px;text-align:right;font-size:13px;font-weight:700;color:#27ae60">+${fmt(r*a.cijena)} KM</td>
+    </tr>`;
+  }).join("");
+
+  const sumarniBox=`
+  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <div style="flex:1;min-width:140px;background:#fff0f0;border:1px solid #f5c6c6;border-radius:8px;padding:14px 16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#c0392b;margin-bottom:4px">MANJAK</div>
+      <div style="font-size:22px;font-weight:700;color:#c0392b;font-family:Georgia,serif">${brM}</div>
+      <div style="font-size:12px;color:#888;margin-top:2px">artikala · ${fmt(vrM)} KM</div>
+    </div>
+    <div style="flex:1;min-width:140px;background:#f0fff4;border:1px solid #b7ebc6;border-radius:8px;padding:14px 16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#27ae60;margin-bottom:4px">VIŠAK</div>
+      <div style="font-size:22px;font-weight:700;color:#27ae60;font-family:Georgia,serif">${brV}</div>
+      <div style="font-size:12px;color:#888;margin-top:2px">artikala · +${fmt(vrV)} KM</div>
+    </div>
+  </div>`;
+
+  return `
+  <div style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="width:4px;height:24px;background:#c9a84c;border-radius:2px"></div>
+      <h3 style="margin:0;font-size:16px;color:#1a1a1a;font-family:Georgia,serif">Analiza manjka / viška — ${datum}</h3>
+    </div>
+    ${sumarniBox}
+    ${manjciRedovi?`
+    <div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#c0392b"></span>
+        <strong style="font-size:14px;color:#c0392b">Manjak</strong>
+      </div>
+      <table style="border-collapse:collapse;width:100%;border-radius:8px;overflow:hidden;border:1px solid #f5c6c6">
+        ${thead}<tbody>${manjciRedovi}</tbody>
+        <tfoot><tr style="background:#2d2416">
+          <td colspan="3" style="padding:8px 12px;color:#c9a84c;font-size:12px;font-weight:700">UKUPNO MANJAK</td>
+          <td colspan="2" style="padding:8px 12px;text-align:right;color:#e74c3c;font-size:14px;font-weight:700">${fmt(vrM)} KM</td>
+        </tr></tfoot>
+      </table>
+    </div>`:''}
+    ${visakRedovi?`
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#27ae60"></span>
+        <strong style="font-size:14px;color:#27ae60">Višak</strong>
+      </div>
+      <table style="border-collapse:collapse;width:100%;border-radius:8px;overflow:hidden;border:1px solid #b7ebc6">
+        ${thead}<tbody>${visakRedovi}</tbody>
+        <tfoot><tr style="background:#2d2416">
+          <td colspan="3" style="padding:8px 12px;color:#c9a84c;font-size:12px;font-weight:700">UKUPNO VIŠAK</td>
+          <td colspan="2" style="padding:8px 12px;text-align:right;color:#27ae60;font-size:14px;font-weight:700">+${fmt(vrV)} KM</td>
+        </tr></tfoot>
+      </table>
+    </div>`:''}
+  </div>`;
 }
 
 async function posaljiMail(){
@@ -1183,18 +1240,34 @@ async function posaljiMail(){
   const inclAnaliza=document.getElementById("mailInclAnaliza").checked;
   const napomena=document.getElementById("mailNapomena").value;
 
-  let htmlContent=`<div style="font-family:Arial,sans-serif;max-width:700px">
-    <div style="background:#0f0e0c;padding:16px 20px;border-bottom:3px solid #c9a84c">
-      <h2 style="color:#c9a84c;margin:0;font-family:serif">Hotel Terme Ozren</h2>
-      <p style="color:#a09070;margin:4px 0 0;font-size:13px">Popis Šanka &amp; Analiza Lagera</p>
+  let htmlContent=`<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;background:#ffffff">
+    <!-- Header -->
+    <div style="background:#1a1410;padding:24px 28px;border-bottom:3px solid #c9a84c">
+      <table style="width:100%"><tr>
+        <td>
+          <div style="font-family:Georgia,serif;font-size:22px;color:#c9a84c;font-weight:700;letter-spacing:.03em">Hotel Terme Ozren</div>
+          <div style="color:#a09070;font-size:12px;margin-top:3px;letter-spacing:.05em">POPIS ŠANKA &amp; ANALIZA LAGERA</div>
+        </td>
+        <td style="text-align:right;vertical-align:top">
+          <div style="background:#c9a84c;color:#1a1410;font-size:12px;font-weight:700;padding:6px 12px;border-radius:4px;display:inline-block">${datum}</div>
+        </td>
+      </tr></table>
     </div>
-    <div style="padding:20px">
-      ${napomena?`<p style="background:#fffbe6;border-left:3px solid #c9a84c;padding:8px 12px;font-size:13px"><strong>Napomena:</strong> ${napomena}</p>`:''}
+    <!-- Info bar -->
+    <div style="background:#fdfaf5;border-bottom:1px solid #e8e0d0;padding:12px 28px;display:flex;gap:24px">
+      <span style="font-size:12px;color:#888">📦 Artikala uneseno: <strong style="color:#1a1a1a">${uneseni.length}</strong></span>
+      <span style="font-size:12px;color:#888">💰 Ukupno: <strong style="color:#a07830">${fmt(uk)} KM</strong></span>
+      ${brM>0?`<span style="font-size:12px;color:#888">⚠ Manjak: <strong style="color:#c0392b">${fmt(vrM)} KM</strong></span>`:''}
+    </div>
+    <!-- Body -->
+    <div style="padding:24px 28px">
+      ${napomena?`<div style="background:#fffbe6;border-left:4px solid #c9a84c;border-radius:0 6px 6px 0;padding:10px 14px;margin-bottom:20px;font-size:13px;color:#5a4a1a"><strong>Napomena:</strong> ${napomena}</div>`:''}
       ${inclPopis?generirajPopisHTML():''}
       ${inclAnaliza?generirajAnalizaHTML():''}
     </div>
-    <div style="background:#f5f0e8;padding:10px 20px;font-size:11px;color:#888">
-      Automatski generisano — Hotel Terme Ozren Popis Šanka aplikacija
+    <!-- Footer -->
+    <div style="background:#1a1410;padding:14px 28px;text-align:center">
+      <div style="font-size:11px;color:#666">Automatski generisano • Hotel Terme Ozren • Popis Šanka aplikacija</div>
     </div>
   </div>`;
 
@@ -1202,22 +1275,23 @@ async function posaljiMail(){
   let uk=0; uneseni.forEach(a=>uk+=parseFloat(kolicine[a.sifra].kol)*a.cijena);
   const {brM,vrM}=Object.keys(lagerData).length?kalkuliraj():{brM:0,vrM:0};
 
- const templateParams = {
-  datum,
-  subject:`Popis šanka ${datum} — Hotel Terme Ozren`,
-  artikala: uneseni.length,
-  ukupno: fmt(uk)+" KM",
-  manjak: brM>0 ? brM+" artikala · "+fmt(vrM)+" KM" : "Nema manjka",
-  napomena: napomena || "—",
-  html_content: htmlContent,
-  to_email: "nabavka@termeozren.com"
-};
+  const templateParams={
+    datum,
+    subject:`Popis šanka ${datum} — Hotel Terme Ozren`,
+    artikala: uneseni.length,
+    ukupno: fmt(uk)+" KM",
+    manjak: brM>0?brM+" artikala · "+fmt(vrM)+" KM":"Nema manjka",
+    napomena: napomena||"—",
+    html_content: htmlContent,
+    to_email1: "menadzer@termeozren.com",
+    to_email2: "zoran.j@gilje-gas.com",
+  };
 
   try{
     emailjs.init(key);
     // Pošalji na oba primaoca
-    await emailjs.send(sid, tid, templateParams);
-
+    await emailjs.send(sid, tid, {...templateParams, to_email: "menadzer@termeozren.com"});
+    await emailjs.send(sid, tid, {...templateParams, to_email: "zoran.j@gilje-gas.com"});
     document.getElementById("mailStatusMsg").innerHTML='<span style="color:#27ae60">✓ Izvještaj uspješno poslan na oba primaoca!</span>';
     showToast("📧 Izvještaj poslan!");
     setTimeout(()=>zatvoriMailModal(), 2000);
