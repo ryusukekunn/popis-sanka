@@ -480,10 +480,11 @@
     <p class="modal-sub" id="mailSub">—</p>
 
     <div style="margin-bottom:14px">
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;letter-spacing:.06em;text-transform:uppercase">Primaoci</div>
-      <div style="font-size:13px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;line-height:1.8">
-        📬 nabavka@termeozren.com
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase">Primaoci</div>
+        <button onclick="dodajPrimaoca()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--gold);cursor:pointer;font-family:'Jost',sans-serif">+ Dodaj</button>
       </div>
+      <div id="primaoциList" style="display:flex;flex-direction:column;gap:6px"></div>
     </div>
 
     <div style="margin-bottom:14px">
@@ -1057,6 +1058,55 @@ function ucitajLagerStorage(){
     if(ord) primijeniLagerSort(JSON.parse(ord));
   }
 }
+// ─── PRIMAOCI ─────────────────────────────────────────────
+function ucitajPrimaoce(){
+  const saved=localStorage.getItem("mail_primaoci");
+  return saved ? JSON.parse(saved) : ["nabavka@termeozren.com"];
+}
+function sacuvajPrimaoce(lista){
+  localStorage.setItem("mail_primaoci", JSON.stringify(lista));
+}
+function renderPrimaoci(){
+  const lista=ucitajPrimaoce();
+  const div=document.getElementById("primaoциList");
+  if(!div) return;
+  div.innerHTML="";
+  lista.forEach((email,i)=>{
+    const row=document.createElement("div");
+    row.style.cssText="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px";
+    row.innerHTML=`
+      <span style="font-size:13px;flex:1;color:var(--text)">📬 ${email}</span>
+      <button onclick="izmijeniPrimaoca(${i})" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:2px 6px" title="Izmijeni">✏️</button>
+      <button onclick="ukloniPrimaoca(${i})" style="background:transparent;border:none;color:#e74c3c;cursor:pointer;font-size:13px;padding:2px 6px" title="Ukloni">✕</button>`;
+    div.appendChild(row);
+  });
+}
+function dodajPrimaoca(){
+  const email=prompt("Unesite email adresu primaoca:");
+  if(!email||!email.includes("@")) return;
+  const lista=ucitajPrimaoce();
+  if(lista.includes(email.trim())){showToast("Već postoji u listi.");return;}
+  lista.push(email.trim());
+  sacuvajPrimaoce(lista);
+  renderPrimaoci();
+}
+function izmijeniPrimaoca(i){
+  const lista=ucitajPrimaoce();
+  const novi=prompt("Izmijeni email adresu:", lista[i]);
+  if(!novi||!novi.includes("@")) return;
+  lista[i]=novi.trim();
+  sacuvajPrimaoce(lista);
+  renderPrimaoci();
+}
+function ukloniPrimaoca(i){
+  const lista=ucitajPrimaoce();
+  if(lista.length<=1){showToast("Mora biti barem jedan primalac.");return;}
+  if(!confirm("Ukloniti "+lista[i]+"?")) return;
+  lista.splice(i,1);
+  sacuvajPrimaoce(lista);
+  renderPrimaoci();
+}
+
 // ─── MAIL ────────────────────────────────────────────────
 function otvoriMailModal(){
   // Popuni EmailJS polja iz localStorage
@@ -1073,6 +1123,7 @@ function otvoriMailModal(){
   const uneseni=ARTIKLI.filter(a=>kolicine[a.sifra]?.kol&&parseFloat(kolicine[a.sifra].kol)>0);
   document.getElementById("mailSub").textContent="Datum: "+datum+" · "+uneseni.length+" artikala uneseno";
   document.getElementById("mailStatusMsg").textContent="";
+  renderPrimaoci();
   document.getElementById("mailOverlay").classList.add("open");
 }
 function zatvoriMailModal(){document.getElementById("mailOverlay").classList.remove("open");}
@@ -1279,13 +1330,15 @@ async function posaljiMail(){
     manjak: brM>0?brM+" artikala · "+fmt(vrM)+" KM":"Nema manjka",
     napomena: napomena||"—",
     html_content: htmlContent,
-    to_email: "nabavka@termeozren.com",
   };
 
   try{
     emailjs.init(key);
-    await emailjs.send(sid, tid, templateParams);
-    document.getElementById("mailStatusMsg").innerHTML='<span style="color:#27ae60">✓ Izvještaj uspješno poslan!</span>';
+    const primaoci=ucitajPrimaoce();
+    for(const email of primaoci){
+      await emailjs.send(sid, tid, {...templateParams, to_email: email});
+    }
+    document.getElementById("mailStatusMsg").innerHTML=`<span style="color:#27ae60">✓ Izvještaj poslan na ${primaoci.length} primaoc${primaoci.length===1?'a':'a'}!</span>`;
     showToast("📧 Izvještaj poslan!");
     setTimeout(()=>zatvoriMailModal(), 2000);
   }catch(err){
