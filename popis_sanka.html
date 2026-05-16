@@ -1202,22 +1202,21 @@ async function posaljiMail(){
   let uk=0; uneseni.forEach(a=>uk+=parseFloat(kolicine[a.sifra].kol)*a.cijena);
   const {brM,vrM}=Object.keys(lagerData).length?kalkuliraj():{brM:0,vrM:0};
 
-  const templateParams={
-    datum,
-    subject:`Popis šanka ${datum} — Hotel Terme Ozren`,
-    artikala: uneseni.length,
-    ukupno: fmt(uk)+" KM",
-    manjak: brM>0?brM+" artikala · "+fmt(vrM)+" KM":"Nema manjka",
-    napomena: napomena||"—",
-    html_content: htmlContent,
-    to_email1: "nabavka@termeozren.com",
-
-  };
+ const templateParams = {
+  datum,
+  subject:`Popis šanka ${datum} — Hotel Terme Ozren`,
+  artikala: uneseni.length,
+  ukupno: fmt(uk)+" KM",
+  manjak: brM>0 ? brM+" artikala · "+fmt(vrM)+" KM" : "Nema manjka",
+  napomena: napomena || "—",
+  html_content: htmlContent,
+  to_email: "nabavka@termeozren.com"
+};
 
   try{
     emailjs.init(key);
     // Pošalji na oba primaoca
-    await emailjs.send(sid, tid, {...templateParams, to_email: "nabavka@termeozren.com"});
+    await emailjs.send(sid, tid, templateParams);
 
     document.getElementById("mailStatusMsg").innerHTML='<span style="color:#27ae60">✓ Izvještaj uspješno poslan na oba primaoca!</span>';
     showToast("📧 Izvještaj poslan!");
