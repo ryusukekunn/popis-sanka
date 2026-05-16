@@ -15,6 +15,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <!-- Fonts & libs -->
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" onerror="console.warn('SheetJS nije učitan')"></script>
 <style>
   :root {
@@ -472,13 +473,73 @@
 
 </div><!-- /container -->
 
+<!-- MAIL MODAL -->
+<div class="modal-overlay" id="mailOverlay">
+  <div class="modal" style="max-width:480px">
+    <h2>📧 Pošalji izvještaj</h2>
+    <p class="modal-sub" id="mailSub">—</p>
+
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;letter-spacing:.06em;text-transform:uppercase">Primaoci</div>
+      <div style="font-size:13px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;line-height:1.8">
+        📬 nabavka@termeozren.com
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;letter-spacing:.06em;text-transform:uppercase">Sadržaj izvještaja</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="mailInclPopis" checked style="accent-color:var(--gold)"> Popis šanka (unesene količine)
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="mailInclAnaliza" checked style="accent-color:var(--gold)"> Analiza manjka/viška
+        </label>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;letter-spacing:.06em;text-transform:uppercase">Napomena (opciono)</div>
+      <textarea id="mailNapomena" rows="2" placeholder="Npr. Popis za smjenu 1..."
+        style="width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Jost',sans-serif;font-size:13px;outline:none;resize:vertical"></textarea>
+    </div>
+
+    <!-- EmailJS konfiguracija -->
+    <details style="margin-bottom:14px">
+      <summary style="font-size:12px;color:var(--text-muted);cursor:pointer">⚙ EmailJS podešavanja</summary>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+        <input type="text" id="ejsServiceId" placeholder="Service ID (npr. service_abc123)"
+          style="background:var(--input-bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:monospace;font-size:12px;outline:none;width:100%"
+          oninput="localStorage.setItem('ejs_sid',this.value)">
+        <input type="text" id="ejsTemplateId" placeholder="Template ID (npr. template_xyz)"
+          style="background:var(--input-bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:monospace;font-size:12px;outline:none;width:100%"
+          oninput="localStorage.setItem('ejs_tid',this.value)">
+        <input type="text" id="ejsPublicKey" placeholder="Public Key"
+          style="background:var(--input-bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:monospace;font-size:12px;outline:none;width:100%"
+          oninput="localStorage.setItem('ejs_key',this.value)">
+        <div style="font-size:11px;color:var(--text-muted)">emailjs.com → Account → API Keys</div>
+      </div>
+    </details>
+
+    <div id="mailStatusMsg" style="font-size:13px;min-height:20px;margin-bottom:12px"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="zatvoriMailModal()">Odustani</button>
+      <button class="btn btn-gold" onclick="posaljiMail()" id="btnPosalji">📧 Pošalji</button>
+    </div>
+  </div>
+</div>
+
 <div class="summary-bar no-print">
   <div class="ss">
     <div class="st"><span class="stl">Unesenih</span><span class="stv sm" id="sBroj">0 / 0</span></div>
     <div class="st"><span class="stl">Vrijednost popisa</span><span class="stv" id="sUk">0,00 KM</span></div>
     <div class="st" id="sManjakWrap" style="display:none"><span class="stl" style="color:#e74c3c">Vrijednost manjka</span><span class="stv sm" id="sManjak" style="color:#e74c3c">—</span></div>
   </div>
-  <div><button class="btn btn-success" onclick="sacuvajPopis()">💾 Sačuvaj popis</button></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-success" onclick="sacuvajPopis()">💾 Sačuvaj popis</button>
+    <button class="btn btn-gold" onclick="otvoriMailModal()">📧 Pošalji</button>
+  </div>
 </div>
 
 <!-- MODAL -->
@@ -913,17 +974,29 @@ function uvozLager(input){
   reader.onload=function(e){
     try{
       const data = e.target.result;
-      let wb;
-      // Pokušaj različite načine parsiranja
-      const opts = {type:"array", cellDates:false, cellNF:false, cellText:false, WTF:false};
-      try { wb = XLSX.read(new Uint8Array(data), opts); }
-      catch(e1){
-        try { wb = XLSX.read(data, {type:"binary"}); }
-        catch(e2){ throw new Error("Ne mogu čitati fajl: "+e1.message); }
+      let wb, rows;
+      // Pokušaj sve moguće načine parsiranja starog XLS formata
+      const tryParse = [
+        ()=> XLSX.read(data, {type:"array"}),
+        ()=> XLSX.read(new Uint8Array(data), {type:"array"}),
+        ()=> {
+          // Konvertuj ArrayBuffer u binary string
+          const bytes = new Uint8Array(data);
+          let bin = "";
+          for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
+          return XLSX.read(bin, {type:"binary"});
+        },
+        ()=> XLSX.read(data, {type:"buffer"}),
+      ];
+      let parseError = null;
+      for(const fn of tryParse){
+        try{ wb=fn(); break; }
+        catch(e){ parseError=e; }
       }
+      if(!wb) throw new Error("Ne mogu čitati XLS: "+parseError?.message);
 
       const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true});
+      rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true});
 
       if(!rows.length){ showToast("Fajl je prazan."); return; }
 
@@ -984,7 +1057,179 @@ function ucitajLagerStorage(){
     if(ord) primijeniLagerSort(JSON.parse(ord));
   }
 }
-// ─── GIST SYNC ────────────────────────────────────────────
+// ─── MAIL ────────────────────────────────────────────────
+function otvoriMailModal(){
+  // Popuni EmailJS polja iz localStorage
+  const sid=localStorage.getItem("ejs_sid")||"";
+  const tid=localStorage.getItem("ejs_tid")||"";
+  const key=localStorage.getItem("ejs_key")||"";
+  const s=document.getElementById("ejsServiceId");
+  const t=document.getElementById("ejsTemplateId");
+  const k=document.getElementById("ejsPublicKey");
+  if(s) s.value=sid;
+  if(t) t.value=tid;
+  if(k) k.value=key;
+
+  const uneseni=ARTIKLI.filter(a=>kolicine[a.sifra]?.kol&&parseFloat(kolicine[a.sifra].kol)>0);
+  document.getElementById("mailSub").textContent="Datum: "+datum+" · "+uneseni.length+" artikala uneseno";
+  document.getElementById("mailStatusMsg").textContent="";
+  document.getElementById("mailOverlay").classList.add("open");
+}
+function zatvoriMailModal(){document.getElementById("mailOverlay").classList.remove("open");}
+document.getElementById("mailOverlay").addEventListener("click",function(e){if(e.target===this)zatvoriMailModal();});
+
+function generirajPopisHTML(){
+  const uneseni=ARTIKLI.filter(a=>kolicine[a.sifra]?.kol&&parseFloat(kolicine[a.sifra].kol)>0);
+  let uk=0;
+  let redovi=uneseni.map((a,i)=>{
+    const kol=parseFloat(kolicine[a.sifra].kol);
+    const u=kol*a.cijena; uk+=u;
+    return `<tr style="border-bottom:1px solid #eee">
+      <td style="padding:5px 8px">${i+1}</td>
+      <td style="padding:5px 8px">${a.naziv}</td>
+      <td style="padding:5px 8px;text-align:center">${a.jm}</td>
+      <td style="padding:5px 8px;text-align:right">${fmt2(kol)}</td>
+      <td style="padding:5px 8px;text-align:right">${fmt(u)} KM</td>
+    </tr>`;
+  }).join("");
+  return `<h3 style="color:#a07830;font-family:serif">Popis šanka — ${datum}</h3>
+  <table style="border-collapse:collapse;width:100%;font-size:13px">
+    <thead><tr style="background:#f5f0e8">
+      <th style="padding:6px 8px;text-align:left">#</th>
+      <th style="padding:6px 8px;text-align:left">Naziv</th>
+      <th style="padding:6px 8px">JM</th>
+      <th style="padding:6px 8px;text-align:right">Količina</th>
+      <th style="padding:6px 8px;text-align:right">Ukupno</th>
+    </tr></thead>
+    <tbody>${redovi}</tbody>
+    <tfoot><tr style="background:#f5f0e8;font-weight:bold">
+      <td colspan="4" style="padding:6px 8px">UKUPNO</td>
+      <td style="padding:6px 8px;text-align:right">${fmt(uk)} KM</td>
+    </tr></tfoot>
+  </table>`;
+}
+
+function generirajAnalizaHTML(){
+  if(!Object.keys(lagerData).length) return "";
+  const {brM,brV,vrM,vrV}=kalkuliraj();
+  const manjci=ARTIKLI.filter(a=>{
+    const l=lagerData[String(a.sifra)];
+    const p=kolicine[a.sifra]?.kol?parseFloat(kolicine[a.sifra].kol):null;
+    return l!==undefined&&p!==null&&(p-Number(l))<-0.001;
+  });
+  const visak=ARTIKLI.filter(a=>{
+    const l=lagerData[String(a.sifra)];
+    const p=kolicine[a.sifra]?.kol?parseFloat(kolicine[a.sifra].kol):null;
+    return l!==undefined&&p!==null&&(p-Number(l))>0.001;
+  });
+
+  const manjciRedovi=manjci.map(a=>{
+    const l=Number(lagerData[String(a.sifra)]);
+    const p=parseFloat(kolicine[a.sifra].kol);
+    const r=p-l;
+    return `<tr style="border-bottom:1px solid #fee;background:#fff8f8">
+      <td style="padding:5px 8px">${a.naziv}</td>
+      <td style="padding:5px 8px;text-align:right">${fmt2(l)} ${a.jm}</td>
+      <td style="padding:5px 8px;text-align:right">${fmt2(p)} ${a.jm}</td>
+      <td style="padding:5px 8px;text-align:right;color:#c0392b;font-weight:bold">${fmt2(r)} ${a.jm}</td>
+      <td style="padding:5px 8px;text-align:right;color:#c0392b;font-weight:bold">${fmt(r*a.cijena)} KM</td>
+    </tr>`;
+  }).join("");
+
+  const visakRedovi=visak.map(a=>{
+    const l=Number(lagerData[String(a.sifra)]);
+    const p=parseFloat(kolicine[a.sifra].kol);
+    const r=p-l;
+    return `<tr style="border-bottom:1px solid #efe;background:#f8fff8">
+      <td style="padding:5px 8px">${a.naziv}</td>
+      <td style="padding:5px 8px;text-align:right">${fmt2(l)} ${a.jm}</td>
+      <td style="padding:5px 8px;text-align:right">${fmt2(p)} ${a.jm}</td>
+      <td style="padding:5px 8px;text-align:right;color:#27ae60;font-weight:bold">+${fmt2(r)} ${a.jm}</td>
+      <td style="padding:5px 8px;text-align:right;color:#27ae60;font-weight:bold">+${fmt(r*a.cijena)} KM</td>
+    </tr>`;
+  }).join("");
+
+  const thead=`<thead><tr style="background:#f5f0e8">
+    <th style="padding:6px 8px;text-align:left">Naziv</th>
+    <th style="padding:6px 8px;text-align:right">Lager</th>
+    <th style="padding:6px 8px;text-align:right">Popis</th>
+    <th style="padding:6px 8px;text-align:right">Razlika</th>
+    <th style="padding:6px 8px;text-align:right">Vr. razlike</th>
+  </tr></thead>`;
+
+  return `<br><h3 style="color:#a07830;font-family:serif">Analiza manjka / viška — ${datum}</h3>
+  <p style="font-size:13px">Manjak: <strong style="color:#c0392b">${brM} artikala · ${fmt(vrM)} KM</strong> &nbsp;|&nbsp; Višak: <strong style="color:#27ae60">${brV} artikala · +${fmt(vrV)} KM</strong></p>
+  ${manjciRedovi?`<h4 style="color:#c0392b;margin:12px 0 6px">🔴 Manjak</h4>
+  <table style="border-collapse:collapse;width:100%;font-size:13px">${thead}<tbody>${manjciRedovi}</tbody></table>`:''}
+  ${visakRedovi?`<h4 style="color:#27ae60;margin:12px 0 6px">🟢 Višak</h4>
+  <table style="border-collapse:collapse;width:100%;font-size:13px">${thead}<tbody>${visakRedovi}</tbody></table>`:''}`;
+}
+
+async function posaljiMail(){
+  const sid=localStorage.getItem("ejs_sid")||"";
+  const tid=localStorage.getItem("ejs_tid")||"";
+  const key=localStorage.getItem("ejs_key")||"";
+
+  if(!sid||!tid||!key){
+    document.getElementById("mailStatusMsg").innerHTML='<span style="color:#e74c3c">⚠ Unesite EmailJS Service ID, Template ID i Public Key u podešavanjima.</span>';
+    return;
+  }
+
+  const btn=document.getElementById("btnPosalji");
+  btn.disabled=true; btn.textContent="⏳ Šaljem...";
+  document.getElementById("mailStatusMsg").textContent="";
+
+  const inclPopis=document.getElementById("mailInclPopis").checked;
+  const inclAnaliza=document.getElementById("mailInclAnaliza").checked;
+  const napomena=document.getElementById("mailNapomena").value;
+
+  let htmlContent=`<div style="font-family:Arial,sans-serif;max-width:700px">
+    <div style="background:#0f0e0c;padding:16px 20px;border-bottom:3px solid #c9a84c">
+      <h2 style="color:#c9a84c;margin:0;font-family:serif">Hotel Terme Ozren</h2>
+      <p style="color:#a09070;margin:4px 0 0;font-size:13px">Popis Šanka &amp; Analiza Lagera</p>
+    </div>
+    <div style="padding:20px">
+      ${napomena?`<p style="background:#fffbe6;border-left:3px solid #c9a84c;padding:8px 12px;font-size:13px"><strong>Napomena:</strong> ${napomena}</p>`:''}
+      ${inclPopis?generirajPopisHTML():''}
+      ${inclAnaliza?generirajAnalizaHTML():''}
+    </div>
+    <div style="background:#f5f0e8;padding:10px 20px;font-size:11px;color:#888">
+      Automatski generisano — Hotel Terme Ozren Popis Šanka aplikacija
+    </div>
+  </div>`;
+
+  const uneseni=ARTIKLI.filter(a=>kolicine[a.sifra]?.kol&&parseFloat(kolicine[a.sifra].kol)>0);
+  let uk=0; uneseni.forEach(a=>uk+=parseFloat(kolicine[a.sifra].kol)*a.cijena);
+  const {brM,vrM}=Object.keys(lagerData).length?kalkuliraj():{brM:0,vrM:0};
+
+  const templateParams={
+    datum,
+    subject:`Popis šanka ${datum} — Hotel Terme Ozren`,
+    artikala: uneseni.length,
+    ukupno: fmt(uk)+" KM",
+    manjak: brM>0?brM+" artikala · "+fmt(vrM)+" KM":"Nema manjka",
+    napomena: napomena||"—",
+    html_content: htmlContent,
+    to_email1: "nabavka@termeozren.com",
+
+  };
+
+  try{
+    emailjs.init(key);
+    // Pošalji na oba primaoca
+    await emailjs.send(sid, tid, {...templateParams, to_email: "nabavka@termeozren.com"});
+
+    document.getElementById("mailStatusMsg").innerHTML='<span style="color:#27ae60">✓ Izvještaj uspješno poslan na oba primaoca!</span>';
+    showToast("📧 Izvještaj poslan!");
+    setTimeout(()=>zatvoriMailModal(), 2000);
+  }catch(err){
+    document.getElementById("mailStatusMsg").innerHTML=`<span style="color:#e74c3c">✗ Greška: ${err?.text||err?.message||JSON.stringify(err)}</span>`;
+  }finally{
+    btn.disabled=false; btn.textContent="📧 Pošalji";
+  }
+}
+
+
 function gistSetStatus(msg, ok){
   const el=document.getElementById("gistStatus");
   if(el){ el.textContent=msg; el.style.color=ok?'var(--success)':ok===false?'#e74c3c':'var(--text-muted)'; }
